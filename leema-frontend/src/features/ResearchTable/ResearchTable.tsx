@@ -28,7 +28,9 @@ function provideResearchStages({
               <Checkbox />
               <div>
                 <h4>{stage.title}</h4>
-                <p>{stage.description}</p>
+                <span className="text-muted-foreground pt-2">
+                  {stage.description}
+                </span>
               </div>
             </div>
             <div className="px-4">
