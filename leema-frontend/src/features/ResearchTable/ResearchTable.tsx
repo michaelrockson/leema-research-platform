@@ -34,6 +34,7 @@ function provideResearchStages({
               </div>
             </div>
             <div className="px-4">
+              {/*<div className="loader"></div>*/}
               <span>
                 <CheckIcon className="bg-green-600 text-white rounded-xl size-7 px-1 py-1" />
               </span>
@@ -57,7 +58,7 @@ export default function ResearchTable() {
       <Card>
         <CardHeader className="flex justify-between items-center px-8">
           <CardTitle>
-            <h5 className="font-bold">Research Discovery Steps</h5>
+            <h4>Research Discovery Steps</h4>
           </CardTitle>
           <Button variant="outline" className="py-5 px-5">
             Run Full Research Scan
