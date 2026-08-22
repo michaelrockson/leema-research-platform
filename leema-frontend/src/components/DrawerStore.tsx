@@ -9,10 +9,12 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer.tsx";
 import { Button } from "@/components/ui/button.tsx";
-import type { ButtonProps } from "@base-ui/react";
+
+type ButtonComponentProps = React.ComponentProps<typeof Button>;
 
 type DrawerStore = {
-  button: React.ComponentType<ButtonProps>;
+  buttonClassName?: string;
+  buttonVariant?: ButtonComponentProps["variant"];
   ButtonLabel:
     | string
     | React.ComponentType<{ size?: number; color?: string }>
@@ -28,7 +30,7 @@ export default function DrawerStore({
 }: {
   drawerProps: DrawerStore;
 }) {
-  const { ButtonLabel } = drawerProps;
+  const { ButtonLabel, buttonClassName, buttonVariant } = drawerProps;
 
   const renderButtonLabel = () => {
     if (typeof ButtonLabel === "string") return ButtonLabel;
@@ -38,7 +40,13 @@ export default function DrawerStore({
 
   return (
     <Drawer swipeDirection="right">
-      <DrawerTrigger>{renderButtonLabel()}</DrawerTrigger>
+      <DrawerTrigger
+        render={
+          <Button variant={buttonVariant} className={buttonClassName}>
+            {renderButtonLabel()}
+          </Button>
+        }
+      />
       <DrawerContent>
         <DrawerHeader className="border-b py-4">
           <DrawerTitle>
