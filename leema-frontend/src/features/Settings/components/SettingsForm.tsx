@@ -1,6 +1,5 @@
 import {
   Field,
-  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -8,7 +7,6 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input.tsx";
-import { Switch } from "@/components/ui/switch.tsx";
 
 function provideSettingsContent() {
   return {
@@ -27,14 +25,9 @@ function provideSettingsContent() {
         "Words and phrases that signal someone is frustrated with a problem.",
     },
     settingsConCountTitle: {
-      countTitle: "How much should we read?\nConversations per community",
+      countTitle: "How much should we read per community?",
       replyTitle: "Replies per conversation",
       replyDescription: "Higher numbers find more, but take longer to process.",
-    },
-    settingsEgressMethods: {
-      egressTitle: "Where should we send results?",
-      egressNotion: "Add to Notion",
-      egressEmail: "Email me a summary",
     },
   };
 }
@@ -104,27 +97,6 @@ export default function SettingsForm() {
           <FieldDescription>
             {settingsContent.settingsConCountTitle.replyDescription}
           </FieldDescription>
-        </Field>
-
-        <FieldLegend>
-          {settingsContent.settingsEgressMethods.egressTitle}
-        </FieldLegend>
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel htmlFor="egressNotion">
-              {settingsContent.settingsEgressMethods.egressNotion}
-            </FieldLabel>
-          </FieldContent>
-          <Switch id="egressNotion" />
-        </Field>
-
-        <Field orientation="horizontal">
-          <FieldContent>
-            <FieldLabel htmlFor="egressEmail">
-              {settingsContent.settingsEgressMethods.egressEmail}
-            </FieldLabel>
-          </FieldContent>
-          <Switch id="egressEmail" />
         </Field>
       </FieldGroup>
     </FieldSet>

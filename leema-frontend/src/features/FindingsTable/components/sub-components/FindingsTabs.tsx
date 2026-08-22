@@ -15,12 +15,8 @@ export function FindingsTabs({ findingData }: FindingsTabsProps) {
   return (
     <Tabs className="flex flex-col" defaultValue="findings">
       <TabsList variant="default" className="divide-y py-2 px-2">
-        <TabsTrigger value="findings" className="py-2 px-2">
-          Discoveries
-        </TabsTrigger>
-        <TabsTrigger value="details" className="py-2 px-2">
-          Activity Logs
-        </TabsTrigger>
+        <TabsTrigger value="findings">Discoveries</TabsTrigger>
+        <TabsTrigger value="details">Activity Logs</TabsTrigger>
       </TabsList>
       <TabsContent value="findings" className="py-2 flex flex-col gap-4">
         {findingData.map((finding) => (

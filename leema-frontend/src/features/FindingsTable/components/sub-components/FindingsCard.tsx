@@ -25,7 +25,7 @@ export default function FindingsCard({
   return (
     <Card className="px-6">
       <CardTitle>
-        <h4>{title}</h4>
+        <h5 className="font-bold">{title}</h5>
       </CardTitle>
       <div className="flex justify-start gap-2">
         <CardDescription className={tagStyles.positive}>
@@ -35,7 +35,7 @@ export default function FindingsCard({
           <span>{tag}</span>
         </CardDescription>
       </div>
-      <CardContent className="text-muted-foreground flex flex-col gap-4">
+      <CardContent className="text-muted-foreground flex flex-col gap-4 pl-0">
         <span>{description}</span>
         <span className="text-caption">{source}</span>
       </CardContent>
