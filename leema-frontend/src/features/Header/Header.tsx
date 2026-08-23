@@ -15,7 +15,7 @@ export default function Header() {
 
       <DrawerStore
         drawerProps={{
-          buttonClassName: "py-5 px-3 border-b border-accent",
+          buttonClassName: "py-5 px-3 border-b",
           buttonVariant: "secondary",
           ButtonLabel: <Settings className="size-5" />,
           drawerTitle: "Settings",
