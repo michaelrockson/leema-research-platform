@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button.tsx";
 import { Settings } from "lucide-react";
 import DrawerStore from "@/components/DrawerStore.tsx";
 import SettingsForm from "@/features/Settings/components/SettingsForm.tsx";
@@ -14,18 +13,17 @@ export default function Header() {
         </span>
       </div>
 
-      <Button variant="secondary" className="py-5 px-3 border-b border-accent">
-        <DrawerStore
-          drawerProps={{
-            button: Button,
-            ButtonLabel: <Settings className="size-5" />,
-            drawerTitle: "Settings",
-            drawerContent: <SettingsForm />,
-            drawerSaveButtonLabel: "Save Changes",
-            drawerCancelButtonLabel: "Cancel",
-          }}
-        />
-      </Button>
+      <DrawerStore
+        drawerProps={{
+          buttonClassName: "py-5 px-3 border-b border-accent",
+          buttonVariant: "secondary",
+          ButtonLabel: <Settings className="size-5" />,
+          drawerTitle: "Settings",
+          drawerContent: <SettingsForm />,
+          drawerSaveButtonLabel: "Save Changes",
+          drawerCancelButtonLabel: "Cancel",
+        }}
+      />
     </div>
   );
 }

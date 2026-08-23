@@ -14,7 +14,7 @@ type FindingsTabsProps = {
 export function FindingsTabs({ findingData }: FindingsTabsProps) {
   return (
     <Tabs className="flex flex-col" defaultValue="findings">
-      <TabsList variant="line" className="divide-y">
+      <TabsList variant="default" className="divide-y py-2 px-2">
         <TabsTrigger value="findings">Discoveries</TabsTrigger>
         <TabsTrigger value="details">Activity Logs</TabsTrigger>
       </TabsList>

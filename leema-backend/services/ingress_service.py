@@ -1,5 +1,4 @@
 from typing import Dict, List, Any
-
 from clients.reddit_client import get_reddit_client
 from database import get_session
 from repositories.validated_post_repository import \

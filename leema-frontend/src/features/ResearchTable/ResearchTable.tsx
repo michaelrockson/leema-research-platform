@@ -25,13 +25,16 @@ function provideResearchStages({
             className="flex justify-between items-center py-4 px-(--card-spacing)"
           >
             <div className="flex gap-6 items-center">
-              <Checkbox />
+              <Checkbox className="border-2" />
               <div>
-                <h4>{stage.title}</h4>
-                <p>{stage.description}</p>
+                <h5 className="font-semibold">{stage.title}</h5>
+                <span className="text-muted-foreground pt-2">
+                  {stage.description}
+                </span>
               </div>
             </div>
             <div className="px-4">
+              {/*<div className="loader"></div>*/}
               <span>
                 <CheckIcon className="bg-green-600 text-white rounded-xl size-7 px-1 py-1" />
               </span>
@@ -61,7 +64,7 @@ export default function ResearchTable() {
             Run Full Research Scan
           </Button>
         </CardHeader>
-        <CardContent className="border-t border-foreground/10 pt-0 pb-(--card-spacing)">
+        <CardContent className="border-t border-foreground/10 pt-0">
           {provideResearchStages({ researchStages: stages })}
         </CardContent>
       </Card>

@@ -1395,6 +1395,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"geist@npm:^1.7.2":
+  version: 1.7.2
+  resolution: "geist@npm:1.7.2"
+  peerDependencies:
+    next: ">=13.2.0"
+  checksum: 10c0/ee523706786297a72db6adc62cf56a8d31e51926d785c195403e7115bfa1dea71bdef84853a9c1a362699b1b91484a8c2fc98048a0cfef7efdd0b478d403cc65
+  languageName: node
+  linkType: hard
+
 "gensync@npm:^1.0.0-beta.2":
   version: 1.0.0-beta.2
   resolution: "gensync@npm:1.0.0-beta.2"
@@ -1572,6 +1581,7 @@ __metadata:
     eslint: "npm:^10.8.0"
     eslint-plugin-react-hooks: "npm:^7.1.1"
     eslint-plugin-react-refresh: "npm:^0.5.3"
+    geist: "npm:^1.7.2"
     globals: "npm:^17.7.0"
     lucide-react: "npm:^1.30.0"
     prettier: "npm:3.9.6"

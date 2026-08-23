@@ -9,7 +9,7 @@ export default function FindingsTable() {
 
   return (
     <div className="container mx-auto py-12">
-      <Card className="flex flex-col gap-6">
+      <Card className="flex flex-col gap-4">
         <CardHeader className="flex justify-between items-center px-6 py-2">
           <h4>Leema Findings: Opportunity Briefs</h4>
           <div className="flex justify-between items-center gap-4">
