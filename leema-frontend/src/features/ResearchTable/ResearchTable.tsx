@@ -11,11 +11,16 @@ import useResearchTable, {
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { CheckIcon } from "lucide-react";
 
-function provideResearchStages({
-  researchStages,
-}: {
-  researchStages: Stages[];
-}) {
+function provideResearchStages(
+  {
+    researchStages,
+    clickedMap,
+  }: {
+    researchStages: Stages[];
+    clickedMap: Record<number, boolean>;
+  },
+  updateCount: (id: number) => void,
+) {
   return (
     <div className="divide-y -mx-(--card-spacing)">
       {researchStages.map((stage) => {
@@ -25,7 +30,11 @@ function provideResearchStages({
             className="flex justify-between items-center py-4 px-(--card-spacing)"
           >
             <div className="flex gap-6 items-center">
-              <Checkbox className="border-2" />
+              <Checkbox
+                className="border-2"
+                checked={!!clickedMap[stage.id]}
+                onCheckedChange={() => updateCount(stage.id)}
+              />
               <div>
                 <h5 className="font-semibold">{stage.title}</h5>
                 <span className="text-muted-foreground pt-2">
@@ -47,12 +56,14 @@ function provideResearchStages({
 }
 
 export default function ResearchTable() {
-  const { stages } = useResearchTable();
+  const { stages, stageCount, clickedMap, updateCount } = useResearchTable();
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-end pt-8">
-        <Button className="py-5 px-5">Run Selected Stages (0)</Button>
+        <Button className="py-5 px-5">
+          Run Selected Stages ({stageCount})
+        </Button>
       </div>
 
       <Card>
@@ -65,7 +76,10 @@ export default function ResearchTable() {
           </Button>
         </CardHeader>
         <CardContent className="border-t border-foreground/10 pt-0">
-          {provideResearchStages({ researchStages: stages })}
+          {provideResearchStages(
+            { researchStages: stages, clickedMap },
+            updateCount,
+          )}
         </CardContent>
       </Card>
     </div>

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 export type Stages = {
   id: number;
   title: string;
@@ -41,5 +43,22 @@ const stages: Stages[] = [
 ];
 
 export default function useResearchTable() {
-  return { stages };
+  const [stageCount, setStageCount] = useState(0);
+  const [clickedMap, setClickedMap] = useState<Record<number, boolean>>({});
+
+  function updateCount(id: number): void {
+    const isClicked = clickedMap[id] ?? false;
+
+    if (!isClicked) {
+      setClickedMap({ ...clickedMap, [id]: true });
+      setStageCount(stageCount + 1);
+    }
+
+    if (isClicked) {
+      setClickedMap({ ...clickedMap, [id]: false });
+      setStageCount(stageCount - 1);
+    }
+  }
+
+  return { stages, stageCount, clickedMap, setStageCount, updateCount };
 }
