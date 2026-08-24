@@ -69,12 +69,13 @@ export default function ResearchTable() {
     updateCount,
     isRunning,
     setIsRunning,
+    runSelectedStages,
   } = useResearchTable();
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-end pt-8">
-        <Button className="py-5 px-5">
+        <Button className="py-5 px-5" onClick={() => runSelectedStages()}>
           Run Selected Stages ({stageCount})
         </Button>
       </div>

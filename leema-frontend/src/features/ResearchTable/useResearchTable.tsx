@@ -50,9 +50,9 @@ const stages: Stages[] = [
 
 export default function useResearchTable() {
   const [stageCount, setStageCount] = useState(0);
+  const [selectedStages, setSelectedStages] = useState<Stages[]>(stages);
   const [clickedMap, setClickedMap] = useState<Record<number, boolean>>({});
   const [isRunning, setIsRunning] = useState(false);
-  const [isStageRunning, setIsStageRunning] = useState(false);
 
   function updateCount(id: number): void {
     const isClicked = clickedMap[id] ?? false;
@@ -68,12 +68,25 @@ export default function useResearchTable() {
     }
   }
 
+  function runSelectedStages(): void {
+    const selectedIds = Object.entries(clickedMap)
+      .filter(([, checked]) => checked)
+      .map(([id]) => Number(id));
+
+    setSelectedStages((prev) =>
+      prev.map((stage) =>
+        selectedIds.includes(stage.id) ? { ...stage, isRunning: true } : stage,
+      ),
+    );
+  }
+
   return {
-    stages,
+    stages: selectedStages,
     stageCount,
     clickedMap,
     setStageCount,
     updateCount,
+    runSelectedStages,
     isRunning,
     setIsRunning,
   };
