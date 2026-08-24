@@ -8,6 +8,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer.tsx";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 
 type ButtonComponentProps = React.ComponentProps<typeof Button>;
@@ -49,9 +50,16 @@ export default function DrawerStore({
       />
       <DrawerContent>
         <DrawerHeader className="border-b py-4">
-          <DrawerTitle>
-            <h3>{drawerProps.drawerTitle}</h3>
-          </DrawerTitle>
+          <div className="flex justify-between items-center">
+            <DrawerTitle>
+              <h3>{drawerProps.drawerTitle}</h3>
+            </DrawerTitle>
+            <DrawerClose
+              render={<Button variant="outline" className="px-2 py-2" />}
+            >
+              <X />
+            </DrawerClose>
+          </div>
         </DrawerHeader>
         <div className="flex-1 overflow-y-auto p-4">
           {drawerProps.drawerContent}
