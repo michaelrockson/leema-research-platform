@@ -9,7 +9,7 @@ import useResearchTable, {
   type Stages,
 } from "@/features/ResearchTable/useResearchTable.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
-import { Loading } from "@/components/Loading.tsx";
+import { Running } from "@/components/Running.tsx";
 import { CheckIcon } from "lucide-react";
 
 function provideResearchStages(
@@ -47,7 +47,7 @@ function provideResearchStages(
               </div>
             </div>
             <div className="px-4">
-              {rowIsLoading && <Loading />}
+              {rowIsLoading && <Running />}
               {!rowIsLoading && stage.status === "COMPLETED" && (
                 <span>
                   <CheckIcon className="bg-green-600 text-white rounded-xl size-7 px-1 py-1" />
