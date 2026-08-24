@@ -5,6 +5,7 @@ export type Stages = {
   title: string;
   description: string;
   status: string;
+  isRunning: boolean;
 };
 
 const stages: Stages[] = [
@@ -13,40 +14,45 @@ const stages: Stages[] = [
     title: "Pain Discovery",
     description: "Scanning target communities for product issues & complaints",
     status: "COMPLETED",
+    isRunning: false,
   },
   {
     id: 2,
     title: "Data Collection",
     description: "Gathering full customer conversations & feedback threads",
     status: "COMPLETED",
+    isRunning: false,
   },
   {
     id: 3,
     title: "Pain & Urgency Assessment",
     description: "Measuring complaint severity and customer frustration levels",
     status: "COMPLETED",
+    isRunning: false,
   },
   {
     id: 4,
     title: "Opportunity Briefs",
     description:
       "Synthesizing recurring problems into actionable product ideas",
-    status: "IN PROGRESS",
+    status: "COMPLETED",
+    isRunning: false,
   },
   {
     id: 5,
     title: "Export & Share",
     description:
       "Delivering formatted findings to Notion and email subscribers",
-    status: "NOT STARTED",
+    status: "COMPLETED",
+    isRunning: false,
   },
 ];
 
 export default function useResearchTable() {
   const [stageCount, setStageCount] = useState(0);
   const [clickedMap, setClickedMap] = useState<Record<number, boolean>>({});
-  const [loadingMap, setLoadingMap] = useState<Record<number, boolean>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isStageRunning, setIsStageRunning] = useState(false);
 
   function updateCount(id: number): void {
     const isClicked = clickedMap[id] ?? false;
@@ -66,11 +72,9 @@ export default function useResearchTable() {
     stages,
     stageCount,
     clickedMap,
-    loadingMap,
-    setLoadingMap,
     setStageCount,
     updateCount,
-    isLoading,
-    setIsLoading,
+    isRunning,
+    setIsRunning,
   };
 }

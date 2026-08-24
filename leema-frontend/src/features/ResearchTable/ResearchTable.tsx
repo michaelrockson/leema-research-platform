@@ -21,11 +21,13 @@ function provideResearchStages(
     clickedMap: Record<number, boolean>;
   },
   updateCount: (id: number) => void,
-  isLoading?: boolean,
+  isRunning: boolean,
 ) {
   return (
     <div className="divide-y -mx-(--card-spacing)">
       {researchStages.map((stage) => {
+        const rowIsLoading = isRunning || stage.isRunning;
+
         return (
           <div
             key={stage.id}
@@ -45,8 +47,8 @@ function provideResearchStages(
               </div>
             </div>
             <div className="px-4">
-              {isLoading && <Loading />}
-              {!isLoading && (
+              {rowIsLoading && <Loading />}
+              {!rowIsLoading && stage.status === "COMPLETED" && (
                 <span>
                   <CheckIcon className="bg-green-600 text-white rounded-xl size-7 px-1 py-1" />
                 </span>
@@ -65,8 +67,8 @@ export default function ResearchTable() {
     stageCount,
     clickedMap,
     updateCount,
-    isLoading,
-    setIsLoading,
+    isRunning,
+    setIsRunning,
   } = useResearchTable();
 
   return (
@@ -85,7 +87,7 @@ export default function ResearchTable() {
           <Button
             variant="outline"
             className="py-5 px-5"
-            onClick={() => setIsLoading(true)}
+            onClick={() => setIsRunning(true)}
           >
             Run Full Research Scan
           </Button>
@@ -94,7 +96,7 @@ export default function ResearchTable() {
           {provideResearchStages(
             { researchStages: stages, clickedMap },
             updateCount,
-            isLoading,
+            isRunning,
           )}
         </CardContent>
       </Card>
