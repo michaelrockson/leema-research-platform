@@ -9,6 +9,7 @@ import useResearchTable, {
   type Stages,
 } from "@/features/ResearchTable/useResearchTable.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
+import { Loading } from "@/components/Loading.tsx";
 import { CheckIcon } from "lucide-react";
 
 function provideResearchStages(
@@ -20,6 +21,7 @@ function provideResearchStages(
     clickedMap: Record<number, boolean>;
   },
   updateCount: (id: number) => void,
+  isLoading?: boolean,
 ) {
   return (
     <div className="divide-y -mx-(--card-spacing)">
@@ -43,10 +45,12 @@ function provideResearchStages(
               </div>
             </div>
             <div className="px-4">
-              {/*<div className="loader"></div>*/}
-              <span>
-                <CheckIcon className="bg-green-600 text-white rounded-xl size-7 px-1 py-1" />
-              </span>
+              {isLoading && <Loading />}
+              {!isLoading && (
+                <span>
+                  <CheckIcon className="bg-green-600 text-white rounded-xl size-7 px-1 py-1" />
+                </span>
+              )}
             </div>
           </div>
         );
@@ -56,7 +60,14 @@ function provideResearchStages(
 }
 
 export default function ResearchTable() {
-  const { stages, stageCount, clickedMap, updateCount } = useResearchTable();
+  const {
+    stages,
+    stageCount,
+    clickedMap,
+    updateCount,
+    isLoading,
+    setIsLoading,
+  } = useResearchTable();
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,7 +82,11 @@ export default function ResearchTable() {
           <CardTitle>
             <h4>Research Discovery Steps</h4>
           </CardTitle>
-          <Button variant="outline" className="py-5 px-5">
+          <Button
+            variant="outline"
+            className="py-5 px-5"
+            onClick={() => setIsLoading(true)}
+          >
             Run Full Research Scan
           </Button>
         </CardHeader>
@@ -79,6 +94,7 @@ export default function ResearchTable() {
           {provideResearchStages(
             { researchStages: stages, clickedMap },
             updateCount,
+            isLoading,
           )}
         </CardContent>
       </Card>

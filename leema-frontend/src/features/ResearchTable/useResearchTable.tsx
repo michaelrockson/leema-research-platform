@@ -45,6 +45,8 @@ const stages: Stages[] = [
 export default function useResearchTable() {
   const [stageCount, setStageCount] = useState(0);
   const [clickedMap, setClickedMap] = useState<Record<number, boolean>>({});
+  const [loadingMap, setLoadingMap] = useState<Record<number, boolean>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   function updateCount(id: number): void {
     const isClicked = clickedMap[id] ?? false;
@@ -60,5 +62,15 @@ export default function useResearchTable() {
     }
   }
 
-  return { stages, stageCount, clickedMap, setStageCount, updateCount };
+  return {
+    stages,
+    stageCount,
+    clickedMap,
+    loadingMap,
+    setLoadingMap,
+    setStageCount,
+    updateCount,
+    isLoading,
+    setIsLoading,
+  };
 }
