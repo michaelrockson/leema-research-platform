@@ -6,9 +6,11 @@ import {
 } from "@/components/ui/tabs.tsx";
 import FindingsCard from "@/features/FindingsTable/components/sub-components/FindingsCard.tsx";
 import type { FindingDataProps } from "@/features/FindingsTable/hooks/useFindingsTable.tsx";
+import FindingsActivityEmptyState from "@/features/FindingsTable/components/sub-components/emptystates/FindingsActivityEmptyState.tsx";
+import FindingsDiscoveriesEmptyState from "@/features/FindingsTable/components/sub-components/emptystates/FindingsDiscoveriesEmptyState.tsx";
 
 type FindingsTabsProps = {
-  findingData: FindingDataProps[];
+  findingData: FindingDataProps[] | undefined;
 };
 
 export function FindingsTabs({ findingData }: FindingsTabsProps) {
@@ -19,14 +21,12 @@ export function FindingsTabs({ findingData }: FindingsTabsProps) {
         <TabsTrigger value="details">Activity Logs</TabsTrigger>
       </TabsList>
       <TabsContent value="findings" className="py-2 flex flex-col gap-4">
-        {findingData.map((finding) => (
+        {findingData?.map((finding) => (
           <FindingsCard key={finding.id} {...finding} />
-        ))}
+        )) && <FindingsDiscoveriesEmptyState />}
       </TabsContent>
       <TabsContent value="details" className="py-2 flex flex-col gap-4">
-        {findingData.map((finding) => (
-          <FindingsCard key={finding.id} {...finding} />
-        ))}
+        <FindingsActivityEmptyState />
       </TabsContent>
     </Tabs>
   );
