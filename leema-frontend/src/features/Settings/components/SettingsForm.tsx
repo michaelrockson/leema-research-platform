@@ -9,6 +9,7 @@ import {
 import { Input } from "@/components/ui/input.tsx";
 import { Badge } from "@/components/ui/badge.tsx";
 import { X } from "lucide-react";
+import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button.tsx";
 
@@ -67,10 +68,62 @@ function provideSettingsContent() {
   };
 }
 
+function handleAddCommunity(
+  setCommunities: React.Dispatch<React.SetStateAction<string[]>>,
+  setCommunityInput: React.Dispatch<React.SetStateAction<string>>,
+  communityInput: string,
+  communities: string[],
+  setCommunityError: React.Dispatch<React.SetStateAction<string | null>>,
+) {
+  const value = communityInput.trim();
+
+  if (!value) {
+    setCommunityError("Community cannot be empty!");
+    return;
+  }
+
+  if (communities.includes(value)) {
+    setCommunityError("This community is already added! Add a new community");
+    return;
+  }
+
+  setCommunities((prev) => [...prev, value]);
+  setCommunityInput("");
+  setCommunityError(null);
+}
+
+function handleAddSignal(
+  setSignals: React.Dispatch<React.SetStateAction<string[]>>,
+  setSignalInput: React.Dispatch<React.SetStateAction<string>>,
+  signalInput: string,
+  signals: string[],
+  setSignalError: React.Dispatch<React.SetStateAction<string | null>>,
+) {
+  const value = signalInput.trim();
+
+  if (!value) {
+    setSignalError("Signal cannot be empty!");
+    return;
+  }
+
+  if (signals.includes(value)) {
+    setSignalError("This signal is already added! Add a new signal");
+    return;
+  }
+
+  setSignals((prev) => [...prev, value]);
+  setSignalInput("");
+  setSignalError(null);
+}
+
 export default function SettingsForm() {
   const settingsContent = provideSettingsContent();
   const [communities, setCommunities] = useState<string[]>(DEFAULT_COMMUNITIES);
   const [signals, setSignals] = useState<string[]>(DEFAULT_SIGNALS);
+  const [communityInput, setCommunityInput] = useState<string>("");
+  const [signalInput, setSignalInput] = useState<string>("");
+  const [communityError, setCommunityError] = useState<string | null>(null);
+  const [signalError, setSignalError] = useState<string | null>(null);
 
   const handleRemoveComChip = (indexToRemove: number) => {
     setCommunities((prev) =>
@@ -114,9 +167,32 @@ export default function SettingsForm() {
               id="communities"
               autoComplete="off"
               placeholder="e.g. r/smallbusiness, r/startups"
+              value={communityInput}
+              onChange={(e) => {
+                setCommunityInput(e.target.value);
+                setCommunityError(null);
+              }}
             />
-            <Button className="px-3 py-6">Add</Button>
+            <Button
+              className="px-3 py-6"
+              onClick={() =>
+                handleAddCommunity(
+                  setCommunities,
+                  setCommunityInput,
+                  communityInput,
+                  communities,
+                  setCommunityError,
+                )
+              }
+            >
+              Add
+            </Button>
           </div>
+          {communityError && (
+            <FieldDescription className="text-red-500">
+              {communityError}
+            </FieldDescription>
+          )}
         </Field>
 
         <Field>
@@ -145,9 +221,32 @@ export default function SettingsForm() {
               id="phrases"
               autoComplete="off"
               placeholder="e.g. so frustrated, wish there was"
+              value={signalInput}
+              onChange={(e) => {
+                setSignalInput(e.target.value);
+                setSignalError(null);
+              }}
             />
-            <Button className="px-3 py-6">Add</Button>
+            <Button
+              className="px-3 py-6"
+              onClick={() =>
+                handleAddSignal(
+                  setSignals,
+                  setSignalInput,
+                  signalInput,
+                  signals,
+                  setSignalError,
+                )
+              }
+            >
+              Add
+            </Button>
           </div>
+          {signalError && (
+            <FieldDescription className="text-red-500">
+              {signalError}
+            </FieldDescription>
+          )}
         </Field>
 
         <FieldGroup>

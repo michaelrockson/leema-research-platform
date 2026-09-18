@@ -89,14 +89,21 @@ if missing_critical:
 # =====================================================
 DEFAULT_SUBREDDITS: List[str] = [
     "accounting",
-    "smallbusiness",
-    "startups",
-    "Entrepreneur",
+    "bookkeeping",
     "sales",
-    "freelance",
+    "ecommerce",
     "logistics",
     "supplychain",
-    "realtors"
+    "realtors",
+    "propertymanagement",
+    "Construction",
+    "manufacturing",
+    "procurement",
+    "restaurantowners",
+    "humanresources",
+    "recruiting",
+    "projectmanagement",
+    "insurance",
 ]
 DEFAULT_POST_LIMIT: int = 50
 DEFAULT_COMMENT_LIMIT: int = 50
@@ -104,7 +111,7 @@ DEFAULT_COMMENT_LIMIT: int = 50
 # =====================================================
 # REDDIT SCOUT BOT QUERIES SETTINGS
 # =====================================================
-MAX_SCOUT_RESULTS: int = 35
+MAX_SCOUT_RESULTS: int = 60
 
 SEARCH_QUERIES: List[str] = [
     "tired of",
