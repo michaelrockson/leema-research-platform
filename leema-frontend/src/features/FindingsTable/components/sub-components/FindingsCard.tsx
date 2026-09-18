@@ -18,9 +18,8 @@ const tagStyles = {
 export default function FindingsCard({
   title,
   feasibility,
-  tag,
   description,
-  source,
+  sentiment,
 }: FindingDataProps) {
   return (
     <Card className="px-6">
@@ -29,15 +28,15 @@ export default function FindingsCard({
       </CardTitle>
       <div className="flex justify-start gap-2">
         <CardDescription className={tagStyles.positive}>
-          <span>{feasibility}</span>
-        </CardDescription>
-        <CardDescription className={tagStyles.negative}>
-          <span>{tag}</span>
+          <span>Opportunity Strength: {feasibility}</span>
         </CardDescription>
       </div>
       <CardContent className="text-muted-foreground flex flex-col gap-4 pl-0">
         <span>{description}</span>
-        <span className="text-caption">{source}</span>
+        <CardDescription className="">
+          <h5 className="font-bold">SENTIMENT INSIGHT</h5>
+        </CardDescription>
+        <span>{sentiment}</span>
       </CardContent>
     </Card>
   );

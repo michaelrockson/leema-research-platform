@@ -30,29 +30,28 @@ export type FindingDataProps = {
   id: number;
   title: string;
   feasibility: string;
-  tag: string;
   description: string;
-  source: string;
+  sentiment: string;
 };
 
 const findingData: FindingDataProps[] = [
   {
     id: 1,
-    title: "Automated Multi-Currency Stripe Reconciliation Tool",
-    feasibility: "High Feasibility",
-    tag: "Activity Log",
+    title: "PROBLEM STATEMENT",
+    feasibility: "High",
     description:
-      "A streamlined integration that automatically maps multi-currency Stripe payments to accounting software without manual adjustments.",
-    source: "Synthesized from 12 community discussions",
+      "Accounting professionals struggle with an opaque and frustrating job application process, receiving numerous rejections (65+ in two months for one user) with little meaningful feedback, despite meeting or exceeding stated qualifications. This creates an opportunity for a career intelligence and support platform.",
+    sentiment:
+      "Sentiment toward AI automation in accounting is predominantly negative, driven by frustration with unrealistic expectations from non-accounting departments, fear of job displacement, and the perceived burden of implementing and training AI without sufficient support or proven success",
   },
   {
     id: 2,
-    title: "In-App Feedback Prioritization via Slack",
-    feasibility: "High Feasibility",
-    tag: "High Demand",
+    title: "PROBLEM STATEMENT",
+    feasibility: "High",
     description:
-      "Help product teams capture, categorize, and prioritize customer requests directly inside team Slack channels.",
-    source: "Synthesized from 8 community discussions",
+      'Single-person accounting departments and small teams face immense pressure and frustration from management to implement AI for complex tasks like month-end close and financial reporting, without adequate support, realistic expectations, or clear guidance on practical, effective solutions, leading to fear of job displacement and a burden to "teach" AI themselves. This creates an opportunity for specialized, user-friendly AI accounting automation',
+    sentiment:
+      "Sentiment toward the job market and hiring process in accounting is predominantly negative, driven by profound frustration, confusion, and feelings of being undervalued due to rapid, unexplained rejections and the perception of a broken system.",
   },
 ];
 
