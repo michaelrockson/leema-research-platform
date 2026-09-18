@@ -6,199 +6,97 @@ import {
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
-import * as React from "react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button.tsx";
+import useSettings from "@/features/Settings/useSettingsForm.tsx";
 
-const defaultSettings: string[] = [
-  "sales",
-  "logistics",
-  "smallbusiness",
-  "marketing",
-  "freelance",
-  "supplychain",
-  "ecommerce",
-  "entrepreneur",
-  "startups",
-  "procurement",
-  "retail",
-  "manufacturing",
-  "consulting",
-];
-
-const defaultSignals: string[] = [
-  "tired of",
-  "frustrated",
-  "annoying",
-  "hate",
-  "nightmare",
-  "painful",
-  "struggling with",
-  "fed up",
-  "overwhelmed",
-  "burned out",
-  "stressful",
-  "time consuming",
-  "manual process",
-  "repetitive",
-  "tedious",
-  "inefficient",
-  "disorganized",
-  "messy",
-  "confusing",
-];
-
-function provideSettingsContent() {
-  return {
-    settingsHeader: {
-      title: "Settings",
-      description:
-        "Tell Leema where to look and how thorough to be. Everything here has a sensible default, so you only need to change what matters to you.",
-    },
-    settingsCommunities: {
-      title: "Where should we look?",
-      description: "Online communities to search for customer complaints.",
-    },
-    settingsPhrases: {
-      title: "What should we listen for?",
-      description:
-        "Words and phrases that signal someone is frustrated with a problem.",
-    },
-    settingsConCountTitle: {
-      countTitle: "How much should we read per community?",
-      replyTitle: "Replies per conversation",
-      replyDescription: "Higher numbers find more, but take longer to process.",
-    },
-  };
-}
-
-function handleAddCommunity(
-  setCommunities: React.Dispatch<React.SetStateAction<string[]>>,
-  setCommunityInput: React.Dispatch<React.SetStateAction<string>>,
-  communityInput: string,
-  communities: string[],
-  setCommunityError: React.Dispatch<React.SetStateAction<string | null>>,
-) {
-  const value = communityInput.trim();
-
-  if (!value) {
-    setCommunityError("Community cannot be empty!");
-    setCommunityInput("");
-    return;
-  }
-
-  if (communities.includes(value)) {
-    setCommunityError("This community is already added! Add a new community");
-    setCommunityInput("");
-    return;
-  }
-
-  setCommunities((prev) => [...prev, value]);
-  setCommunityInput("");
-  setCommunityError(null);
-}
-
-function handleAddSignal(
-  setSignals: React.Dispatch<React.SetStateAction<string[]>>,
-  setSignalInput: React.Dispatch<React.SetStateAction<string>>,
-  signalInput: string,
-  signals: string[],
-  setSignalError: React.Dispatch<React.SetStateAction<string | null>>,
-) {
-  const value = signalInput.trim();
-
-  if (!value) {
-    setSignalError("Signal cannot be empty!");
-    setSignalInput("");
-    return;
-  }
-
-  if (signals.includes(value)) {
-    setSignalError("This signal is already added! Add a new signal");
-    setSignalInput("");
-    return;
-  }
-
-  setSignals((prev) => [...prev, value]);
-  setSignalInput("");
-  setSignalError(null);
-}
+const settingsContent = {
+  header: {
+    description:
+      "Tell Leema where to look and how thorough to be. Everything here has a sensible default, so you only need to change what matters to you.",
+  },
+  communities: {
+    title: "Where should we look?",
+    description: "Online communities to search for customer complaints.",
+  },
+  phrases: {
+    title: "What should we listen for?",
+    description:
+      "Words and phrases that signal someone is frustrated with a problem.",
+  },
+  counts: {
+    title: "How much should we read per community?",
+    repliesTitle: "Replies per conversation",
+    repliesDescription: "Higher numbers find more, but take longer to process.",
+  },
+};
 
 export default function SettingsForm() {
-  const settingsContent = provideSettingsContent();
-  const [communities, setCommunities] = useState<string[]>(defaultSettings);
-  const [signals, setSignals] = useState<string[]>(defaultSignals);
-  const [communityInput, setCommunityInput] = useState<string>("");
-  const [signalInput, setSignalInput] = useState<string>("");
-  const [communityError, setCommunityError] = useState<string | null>(null);
-  const [signalError, setSignalError] = useState<string | null>(null);
-
-  const handleRemoveComChip = (indexToRemove: number) => {
-    setCommunities((prev) =>
-      prev.filter((_, index) => index !== indexToRemove),
-    );
-  };
-
-  const handleRemoveSigChip = (indexToRemove: number) => {
-    setSignals((prev) => prev.filter((_, index) => index !== indexToRemove));
-  };
+  const {
+    communities,
+    signals,
+    communityInput,
+    signalInput,
+    communityError,
+    signalError,
+    setCommunityInput,
+    setSignalInput,
+    setCommunityError,
+    setSignalError,
+    addCommunity,
+    removeCommunity,
+    addSignal,
+    removeSignal,
+  } = useSettings();
 
   return (
     <FieldSet>
       <FieldDescription className="pb-5">
-        {settingsContent.settingsHeader.description}
+        {settingsContent.header.description}
       </FieldDescription>
+
       <FieldGroup className="flex flex-col gap-12">
         <Field>
           <FieldLabel htmlFor="communities">
-            {settingsContent.settingsCommunities.title}
+            {settingsContent.communities.title}
           </FieldLabel>
+
           <FieldDescription>
-            {settingsContent.settingsCommunities.description}
+            {settingsContent.communities.description}
           </FieldDescription>
+
           <div className="flex flex-wrap gap-2">
-            {communities.map((chip, index) => (
-              <Badge key={chip} variant="outline" className="px-3 py-3">
-                {chip}
-                <div>
-                  <X
-                    className="cursor-pointer size-3"
-                    onClick={() => handleRemoveComChip(index)}
-                  />
-                </div>
+            {communities.map((community, index) => (
+              <Badge key={community} variant="outline" className="px-3 py-3">
+                {community}
+
+                <X
+                  className="size-3 cursor-pointer"
+                  onClick={() => removeCommunity(index)}
+                />
               </Badge>
             ))}
           </div>
 
-          <div className="flex gap-3 items-center">
+          <div className="flex items-center gap-3">
             <Input
               id="communities"
               autoComplete="off"
               placeholder="e.g. r/smallbusiness, r/startups"
               value={communityInput}
-              onChange={(e) => {
-                setCommunityInput(e.target.value);
+              onChange={(event) => {
+                setCommunityInput(event.target.value);
                 setCommunityError(null);
               }}
             />
-            <Button
-              className="px-3 py-6"
-              onClick={() =>
-                handleAddCommunity(
-                  setCommunities,
-                  setCommunityInput,
-                  communityInput,
-                  communities,
-                  setCommunityError,
-                )
-              }
-            >
+
+            <Button className="px-3 py-6" onClick={addCommunity}>
               Add
             </Button>
           </div>
+
           {communityError && (
             <FieldDescription className="text-red-500">
               {communityError}
@@ -208,51 +106,43 @@ export default function SettingsForm() {
 
         <Field>
           <FieldLabel htmlFor="phrases">
-            {settingsContent.settingsPhrases.title}
+            {settingsContent.phrases.title}
           </FieldLabel>
+
           <FieldDescription>
-            {settingsContent.settingsPhrases.description}
+            {settingsContent.phrases.description}
           </FieldDescription>
+
           <div className="flex flex-wrap gap-2">
-            {signals.map((chip, index) => (
-              <Badge key={chip} variant="outline" className="px-3 py-3">
-                {chip}
-                <div>
-                  <X
-                    className="cursor-pointer size-3"
-                    onClick={() => handleRemoveSigChip(index)}
-                  />
-                </div>
+            {signals.map((signal, index) => (
+              <Badge key={signal} variant="outline" className="px-3 py-3">
+                {signal}
+
+                <X
+                  className="size-3 cursor-pointer"
+                  onClick={() => removeSignal(index)}
+                />
               </Badge>
             ))}
           </div>
 
-          <div className="flex gap-3 items-center">
+          <div className="flex items-center gap-3">
             <Input
               id="phrases"
               autoComplete="off"
               placeholder="e.g. so frustrated, wish there was"
               value={signalInput}
-              onChange={(e) => {
-                setSignalInput(e.target.value);
+              onChange={(event) => {
+                setSignalInput(event.target.value);
                 setSignalError(null);
               }}
             />
-            <Button
-              className="px-3 py-6"
-              onClick={() =>
-                handleAddSignal(
-                  setSignals,
-                  setSignalInput,
-                  signalInput,
-                  signals,
-                  setSignalError,
-                )
-              }
-            >
+
+            <Button className="px-3 py-6" onClick={addSignal}>
               Add
             </Button>
           </div>
+
           {signalError && (
             <FieldDescription className="text-red-500">
               {signalError}
@@ -261,13 +151,13 @@ export default function SettingsForm() {
         </Field>
 
         <FieldGroup>
-          <FieldLegend>
-            {settingsContent.settingsConCountTitle.countTitle}
-          </FieldLegend>
+          <FieldLegend>{settingsContent.counts.title}</FieldLegend>
+
           <Field>
             <FieldLabel htmlFor="conversationsPerCommunity">
               Conversations per community
             </FieldLabel>
+
             <Input
               id="conversationsPerCommunity"
               type="number"
@@ -278,16 +168,18 @@ export default function SettingsForm() {
 
           <Field>
             <FieldLabel htmlFor="repliesPerConversation">
-              {settingsContent.settingsConCountTitle.replyTitle}
+              {settingsContent.counts.repliesTitle}
             </FieldLabel>
+
             <Input
               id="repliesPerConversation"
               type="number"
               min={1}
               placeholder="10"
             />
+
             <FieldDescription>
-              {settingsContent.settingsConCountTitle.replyDescription}
+              {settingsContent.counts.repliesDescription}
             </FieldDescription>
           </Field>
         </FieldGroup>
