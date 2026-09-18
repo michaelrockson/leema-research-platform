@@ -13,23 +13,7 @@ import * as React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button.tsx";
 
-const DEFAULT_COMMUNITIES: string[] = [
-  "r/sales",
-  "r/logistics",
-  "r/smallbusiness",
-  "r/marketing",
-  "r/freelance",
-  "r/supplychain",
-  "r/ecommerce",
-  "r/entrepreneur",
-  "r/startups",
-  "r/procurement",
-  "r/retail",
-  "r/manufacturing",
-  "r/consulting",
-];
-
-const DEFAULT_SIGNALS: string[] = [
+const defaultSettings: string[] = [
   "sales",
   "logistics",
   "smallbusiness",
@@ -42,6 +26,29 @@ const DEFAULT_SIGNALS: string[] = [
   "procurement",
   "retail",
   "manufacturing",
+  "consulting",
+];
+
+const defaultSignals: string[] = [
+  "tired of",
+  "frustrated",
+  "annoying",
+  "hate",
+  "nightmare",
+  "painful",
+  "struggling with",
+  "fed up",
+  "overwhelmed",
+  "burned out",
+  "stressful",
+  "time consuming",
+  "manual process",
+  "repetitive",
+  "tedious",
+  "inefficient",
+  "disorganized",
+  "messy",
+  "confusing",
 ];
 
 function provideSettingsContent() {
@@ -79,11 +86,13 @@ function handleAddCommunity(
 
   if (!value) {
     setCommunityError("Community cannot be empty!");
+    setCommunityInput("");
     return;
   }
 
   if (communities.includes(value)) {
     setCommunityError("This community is already added! Add a new community");
+    setCommunityInput("");
     return;
   }
 
@@ -103,11 +112,13 @@ function handleAddSignal(
 
   if (!value) {
     setSignalError("Signal cannot be empty!");
+    setSignalInput("");
     return;
   }
 
   if (signals.includes(value)) {
     setSignalError("This signal is already added! Add a new signal");
+    setSignalInput("");
     return;
   }
 
@@ -118,8 +129,8 @@ function handleAddSignal(
 
 export default function SettingsForm() {
   const settingsContent = provideSettingsContent();
-  const [communities, setCommunities] = useState<string[]>(DEFAULT_COMMUNITIES);
-  const [signals, setSignals] = useState<string[]>(DEFAULT_SIGNALS);
+  const [communities, setCommunities] = useState<string[]>(defaultSettings);
+  const [signals, setSignals] = useState<string[]>(defaultSignals);
   const [communityInput, setCommunityInput] = useState<string>("");
   const [signalInput, setSignalInput] = useState<string>("");
   const [communityError, setCommunityError] = useState<string | null>(null);
