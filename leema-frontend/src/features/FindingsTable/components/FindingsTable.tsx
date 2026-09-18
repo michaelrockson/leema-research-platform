@@ -5,7 +5,7 @@ import { FindingsTabs } from "@/features/FindingsTable/components/sub-components
 import useFindingsTable from "@/features/FindingsTable/hooks/useFindingsTable.tsx";
 
 export default function FindingsTable() {
-  const { findingData } = useFindingsTable();
+  const { findingDataUndefined } = useFindingsTable();
 
   return (
     <div className="container mx-auto py-12">
@@ -18,7 +18,7 @@ export default function FindingsTable() {
           </div>
         </CardHeader>
         <CardContent>
-          <FindingsTabs findingData={findingData} />
+          <FindingsTabs findingData={findingDataUndefined} />
         </CardContent>
       </Card>
     </div>

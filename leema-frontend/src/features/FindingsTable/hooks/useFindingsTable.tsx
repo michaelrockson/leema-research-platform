@@ -34,7 +34,7 @@ export type FindingDataProps = {
   sentiment: string;
 };
 
-const findingData: FindingDataProps[] = [
+const findingData: FindingDataProps[] | undefined = [
   {
     id: 1,
     title: "PROBLEM STATEMENT",
@@ -55,6 +55,10 @@ const findingData: FindingDataProps[] = [
   },
 ];
 
+const findingDataUndefined: FindingDataProps[] | undefined = [
+
+];
+
 export default function useFindingsTable() {
-  return { saveOptions, findingData };
+  return { saveOptions, findingData, findingDataUndefined };
 }
