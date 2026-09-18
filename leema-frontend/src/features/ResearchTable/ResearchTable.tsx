@@ -36,7 +36,7 @@ function provideResearchStages(
             <div className="flex gap-6 items-center">
               <Checkbox
                 className="border-2"
-                checked={!!clickedMap[stage.id]}
+                checked={clickedMap[stage.id]}
                 onCheckedChange={() => updateCount(stage.id)}
               />
               <div>
