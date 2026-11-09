@@ -1,4 +1,4 @@
-import useFindingsTable from "@/features/FindingsTable/hooks/useFindingsTable.tsx";
+import { useResearchContext } from "@/context/ResearchContext.tsx";
 import {
   Select,
   SelectContent,
@@ -8,13 +8,40 @@ import {
   SelectValue,
 } from "@/components/ui/select.tsx";
 
-export default function FindingsSelect() {
-  const { saveOptions } = useFindingsTable();
+const saveOptions = [
+  { label: "Notion", value: "Notion" },
+  { label: "Email", value: "Email" },
+  { label: "PDF", value: "PDF" },
+  { label: "CSV", value: "CSV" },
+  { label: "All channels", value: "All Channels" },
+];
+
+type FindingsSelectProps = {
+  value?: string;
+  onValueChange?: (val: string) => void;
+};
+
+export default function FindingsSelect({
+  value,
+  onValueChange,
+}: FindingsSelectProps) {
+  const { selectedChannel, setSelectedChannel } = useResearchContext();
+
+  const currentValue = value ?? selectedChannel;
+  const handleChange = onValueChange ?? setSelectedChannel;
 
   return (
-    <Select items={saveOptions}>
-      <SelectTrigger className="px-5 py-5 w-4/5">
-        <SelectValue placeholder="Select an option" />
+    <Select
+      items={saveOptions}
+      value={currentValue}
+      onValueChange={(val) => {
+        if (typeof val === "string") {
+          handleChange(val);
+        }
+      }}
+    >
+      <SelectTrigger className="px-5 py-5 min-w-[180px]">
+        <SelectValue placeholder="Send findings to…" />
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>

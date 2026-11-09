@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800,900&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
@@ -35,9 +37,14 @@
     --sidebar-accent-foreground: rgb(20, 24, 90);
     --sidebar-border: rgb(228, 228, 228);
     --sidebar-ring: rgb(63, 94, 194);
-    --font-sans: Geist, sans-serif;
+
+    /* Typography: Satoshi for Titles, Inter for Paragraphs & Body */
+    --font-title: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-sans: var(--font-body);
     --font-serif: Noto Serif Georgian, ui-serif, serif;
     --font-mono: Geist Mono, monospace;
+
     --radius: 0.5rem;
     --shadow-x: 0.25px;
     --shadow-y: 1px;
@@ -90,9 +97,14 @@
     --sidebar-accent-foreground: rgb(219, 230, 246);
     --sidebar-border: rgb(36, 36, 36);
     --sidebar-ring: rgb(63, 94, 194);
-    --font-sans: Geist, sans-serif;
+
+    /* Typography: Satoshi for Titles, Inter for Paragraphs & Body */
+    --font-title: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-sans: var(--font-body);
     --font-serif: Noto Serif Georgian, ui-serif, serif;
     --font-mono: Geist Mono, monospace;
+
     --radius: 0.5rem;
     --shadow-x: 0.25px;
     --shadow-y: 1px;
@@ -144,7 +156,10 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
 
-    --font-sans: var(--font-sans);
+    --font-sans: var(--font-body);
+    --font-body: var(--font-body);
+    --font-title: var(--font-title);
+    --font-heading: var(--font-title);
     --font-mono: var(--font-mono);
     --font-serif: var(--font-serif);
 
@@ -170,52 +185,77 @@
 
     body {
         @apply bg-background text-foreground;
+        font-family: var(--font-body);
         letter-spacing: var(--tracking-normal);
     }
 
+    h1, h2, h3, h4, h5, h6, .font-title {
+        font-family: var(--font-title);
+    }
+
     h1 {
-        font-family: var(--font-sans);
+        font-family: var(--font-title);
         font-size: 2.25rem;
         line-height: 1.2;
-        font-weight: 600;
-        letter-spacing: -0.02em;
+        font-weight: 700;
+        letter-spacing: -0.025em;
         color: var(--foreground);
     }
 
     h2 {
-        font-family: var(--font-sans);
+        font-family: var(--font-title);
         font-style: normal;
-        font-size: 1.75rem;
+        font-size: 2rem;
         line-height: 1.25;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--foreground);
+    }
+
+    h3 {
+        font-family: var(--font-title);
+        font-size: 1.5rem;
+        line-height: 1.3;
         font-weight: 600;
         letter-spacing: -0.015em;
         color: var(--foreground);
     }
 
-    h3 {
-        font-family: var(--font-sans);
-        font-size: 1.375rem;
-        line-height: 1.3;
+    h4 {
+        font-family: var(--font-title);
+        font-size: 1.25rem;
+        line-height: 1.4;
         font-weight: 600;
         letter-spacing: -0.01em;
         color: var(--foreground);
     }
 
-    h4 {
-        font-family: var(--font-sans);
+    h5 {
+        font-family: var(--font-title);
         font-size: 1.125rem;
+        line-height: 1.4;
+        font-weight: 600;
+        letter-spacing: -0.005em;
+        color: var(--foreground);
+    }
+
+    h6 {
+        font-family: var(--font-title);
+        font-size: 1rem;
         line-height: 1.4;
         font-weight: 600;
         color: var(--foreground);
     }
 
-    p {
+    p, .font-body {
+        font-family: var(--font-body);
         font-size: 1rem;
         line-height: 1.6;
         color: var(--foreground);
     }
 
     small, .text-caption {
+        font-family: var(--font-body);
         font-size: 0.75rem;
         line-height: 1.4;
         font-weight: 500;
@@ -223,7 +263,6 @@
         color: var(--muted-foreground);
     }
 }
-
 
 .loader {
     width: 26px;

@@ -1,35 +1,13 @@
-import { useState } from "react";
-
-const defaultSettings = [
-  "sales",
-  "logistics",
-  "smallbusiness",
-  "marketing",
-  "freelance",
-  "supplychain",
-  "ecommerce",
-  "entrepreneur",
-];
-
-const defaultSignals = [
-  "tired of",
-  "frustrated",
-  "annoying",
-  "hate",
-  "nightmare",
-  "painful",
-  "struggling with",
-  "fed up",
-  "overwhelmed",
-  "burned out",
-  "stressful",
-  "time consuming",
-  "manual process",
-];
+import { useState, useEffect } from "react";
+import { settingsService } from "@/features/Settings/services/settingsService";
 
 export default function useSettings() {
-  const [communities, setCommunities] = useState(defaultSettings);
-  const [signals, setSignals] = useState(defaultSignals);
+  const [communities, setCommunities] = useState<string[]>(() => {
+    return settingsService.getSettings().communities;
+  });
+  const [signals, setSignals] = useState<string[]>(() => {
+    return settingsService.getSettings().signals;
+  });
 
   const [communityInput, setCommunityInput] = useState("");
   const [signalInput, setSignalInput] = useState("");
@@ -37,8 +15,12 @@ export default function useSettings() {
   const [communityError, setCommunityError] = useState<string | null>(null);
   const [signalError, setSignalError] = useState<string | null>(null);
 
+  useEffect(() => {
+    settingsService.saveSettings({ communities, signals });
+  }, [communities, signals]);
+
   const addCommunity = () => {
-    const value = communityInput.trim();
+    const value = communityInput.trim().replace(/^r\//, "");
 
     if (!value) {
       setCommunityError("Community cannot be empty!");

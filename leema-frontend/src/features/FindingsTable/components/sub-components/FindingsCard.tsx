@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card.tsx";
-import type { FindingDataProps } from "@/features/FindingsTable/hooks/useFindingsTable.tsx";
+import type { FindingDataProps } from "@/features/FindingsTable/types";
 
 const tagStyles = {
   positive:
@@ -28,13 +28,13 @@ export default function FindingsCard({
       </CardTitle>
       <div className="flex justify-start gap-2">
         <CardDescription className={tagStyles.positive}>
-          <span>Opportunity Strength: {feasibility}</span>
+          <span>Opportunity potential: {feasibility}</span>
         </CardDescription>
       </div>
       <CardContent className="text-muted-foreground flex flex-col gap-4 pl-0">
         <span>{description}</span>
         <CardDescription className="">
-          <h5 className="font-bold">SENTIMENT INSIGHT</h5>
+          <h5 className="font-bold">What people are saying</h5>
         </CardDescription>
         <span>{sentiment}</span>
       </CardContent>

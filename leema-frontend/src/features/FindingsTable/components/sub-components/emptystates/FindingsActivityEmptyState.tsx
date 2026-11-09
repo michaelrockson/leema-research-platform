@@ -7,12 +7,13 @@ export default function FindingsActivityEmptyState() {
       <CardContent>
         <img
           src={emptyBoxImage}
-          alt="No findings available"
+          alt="No posts discovered yet"
           className="w-40 h-40 object-contain"
         />
       </CardContent>
       <CardDescription className="text-center text-sm text-muted-foreground">
-        There are currently no activities to display. Please check back later.
+        No conversations found yet. Run “Find conversations” to search your
+        selected communities.
       </CardDescription>
     </Card>
   );

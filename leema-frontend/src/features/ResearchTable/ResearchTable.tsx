@@ -5,12 +5,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.tsx";
-import useResearchTable, {
-  type Stages,
-} from "@/features/ResearchTable/useResearchTable.tsx";
 import { Checkbox } from "@/components/ui/checkbox.tsx";
 import { Running } from "@/components/Running.tsx";
 import { CheckIcon } from "lucide-react";
+import {
+  useResearchContext,
+  type Stages,
+} from "@/context/ResearchContext.tsx";
 
 function provideResearchStages(
   {
@@ -20,13 +21,13 @@ function provideResearchStages(
     researchStages: Stages[];
     clickedMap: Record<number, boolean>;
   },
-  updateCount: (id: number) => void,
-  isRunning: boolean,
+  updateCount: (id: number) => void
 ) {
   return (
     <div className="divide-y -mx-(--card-spacing)">
       {researchStages.map((stage) => {
-        const rowIsLoading = isRunning || stage.isRunning;
+        // Individual row loading state: strictly controlled by stage.isRunning
+        const rowIsLoading = stage.isRunning;
 
         return (
           <div
@@ -36,7 +37,7 @@ function provideResearchStages(
             <div className="flex gap-6 items-center">
               <Checkbox
                 className="border-2"
-                checked={clickedMap[stage.id]}
+                checked={clickedMap[stage.id] ?? false}
                 onCheckedChange={() => updateCount(stage.id)}
               />
               <div>
@@ -56,7 +57,7 @@ function provideResearchStages(
             </div>
           </div>
         );
-      })}{" "}
+      })}
     </div>
   );
 }
@@ -68,36 +69,48 @@ export default function ResearchTable() {
     clickedMap,
     updateCount,
     isRunning,
-    setIsRunning,
     runSelectedStages,
-  } = useResearchTable();
+    runFullResearchScan,
+    runError,
+  } = useResearchContext();
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-end pt-8">
-        <Button className="py-5 px-5" onClick={() => runSelectedStages()}>
-          Run Selected Stages ({stageCount})
+      <div className="flex items-center justify-between pt-8">
+        <div>
+          {runError && (
+            <span className="text-sm text-red-500 font-medium">
+              Error: {runError}
+            </span>
+          )}
+        </div>
+        <Button
+          className="py-5 px-5"
+          disabled={isRunning || stageCount === 0}
+          onClick={() => runSelectedStages()}
+        >
+          {isRunning ? "Running…" : `Run selected steps (${stageCount})`}
         </Button>
       </div>
 
       <Card>
         <CardHeader className="flex justify-between items-center px-8">
           <CardTitle>
-            <h4>Research Discovery Steps</h4>
+            <h4>Research steps</h4>
           </CardTitle>
           <Button
             variant="outline"
             className="py-5 px-5"
-            onClick={() => setIsRunning(true)}
+            disabled={isRunning}
+            onClick={() => runFullResearchScan()}
           >
-            Run Full Research Scan
+            {isRunning ? "Running all steps…" : "Run all steps"}
           </Button>
         </CardHeader>
         <CardContent className="border-t border-foreground/10 pt-0">
           {provideResearchStages(
             { researchStages: stages, clickedMap },
-            updateCount,
-            isRunning,
+            updateCount
           )}
         </CardContent>
       </Card>
