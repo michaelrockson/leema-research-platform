@@ -11,7 +11,7 @@ from clients.reddit_client import get_reddit_client, \
 from database import get_session
 from database.models import ValidatedPost
 from settings import settings
-from utils.helpers import search_one
+from utils.helpers import search_one, combine_search_queries
 from utils.logger import logger
 from utils.rate_limiter import batched_gather, gemini_retry
 
@@ -27,9 +27,11 @@ class ScoutBotService:
     """
 
 
-    def __init__(self):
-        self.subreddits = settings.DEFAULT_SUBREDDITS
-        self.search_queries = settings.SEARCH_QUERIES
+    def __init__(self, subreddits: List[str] = None, search_queries: List[str] = None):
+        self.subreddits = subreddits or settings.DEFAULT_SUBREDDITS
+        raw_queries = search_queries or settings.SEARCH_QUERIES
+        # Combine search queries into boolean OR groups to reduce API round-trips by up to 90%
+        self.search_queries = combine_search_queries(raw_queries, chunk_size=8)
         self.min_score = settings.MIN_SCORE
         self.min_comments = settings.MIN_COMMENTS
         self.min_upvote_ratio = settings.MIN_UPVOTE_RATIO
@@ -243,6 +245,7 @@ class ScoutBotService:
             agent_response = response.text
             logger.info("Agent validate posts: session complete.")
             logger.info(f"{agent_response}")
+            return agent_response
 
         except errors.ServerError as e:
             logger.error(f"Gemini server error: {e}")
@@ -261,7 +264,7 @@ class ScoutBotService:
         except Exception as e:
             logger.error(
                 f"Unexpected error while running Gemini validation agent {e}")
-            raise SystemExit("Agent terminated due to an error.")
+            raise RuntimeError(f"Agent terminated due to an error: {e}")
 
 
     def store_validated_posts(self, post_ids: List[str]) -> Dict:

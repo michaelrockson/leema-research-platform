@@ -1,8 +1,13 @@
+import asyncio
+import json
 import re
+from typing import List, Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from database import get_session
 from database.init_db import init_db
@@ -19,12 +24,14 @@ from utils.logger import logger
 
 app = FastAPI(
     title = "Leema AI Agent Backend",
-    description = "Three-Phase API powering customer problem discovery, sentiment analysis and egress reporting.",
-    version = "1.0.0"
+    description = "Three-Phase API powering customer problem discovery, sentiment analysis, and egress reporting.",
+    version = "1.0.0",
 )
 
+# Maintain backwards compatibility if referenced as 'server'
 server = app
 
+# Enable CORS for local frontend clients (Vite / React default ports)
 app.add_middleware(
     CORSMiddleware,
     allow_origins = [
@@ -37,6 +44,11 @@ app.add_middleware(
     allow_methods = ["*"],
     allow_headers = ["*"],
 )
+
+
+class ExtractionRequest(BaseModel):
+    subreddits: Optional[List[str]] = None
+    queries: Optional[List[str]] = None
 
 
 def _parse_brief_to_findings(briefs):
@@ -85,7 +97,9 @@ def _parse_brief_to_findings(briefs):
             if sentiment_match:
                 sentiment = sentiment_match.group(1).strip()
             else:
-                sentiment = "Sentiment insight captured from customer community discussions."
+                sentiment = (
+                    "Sentiment insight captured from customer community discussions."
+                )
 
             feasibility = "High"
             if strength_match:
@@ -108,17 +122,24 @@ def _parse_brief_to_findings(briefs):
 
 
 @app.get("/RunExtraction")
-def run_extraction():
+def run_extraction(subreddits: Optional[str] = None):
     """
-    Phase 1: Run Scout Bot (validation) and Ingress Pipeline (scraping & storage).
-    Returns structured data of extracted posts and communities.
+    Phase 1: Run Scout Bot (with boolean OR combined queries) and Ingress Pipeline.
+    Pass optional ?subreddits=accounting,bookkeeping to target specific communities.
     """
     try:
         logger.info(
             "Phase 1: Initializing database and starting extraction...")
         init_db()
 
-        scout = ScoutBotPipeline()
+        subreddit_list = (
+            [s.strip().replace("r/", "") for s in subreddits.split(",") if
+             s.strip()]
+            if subreddits
+            else None
+        )
+
+        scout = ScoutBotPipeline(subreddits = subreddit_list)
         ingress = IngressPipeline()
 
         pipelines = [scout, ingress]
@@ -162,9 +183,98 @@ def run_extraction():
     except Exception as err:
         logger.error(f"Failed to run extraction process: {err}")
         raise HTTPException(
-            status_code = 500,
-            detail = f"Extraction phase failed: {err}"
+            status_code = 500, detail = f"Extraction phase failed: {err}"
         )
+
+
+@app.post("/RunExtraction")
+def run_extraction_with_body(payload: ExtractionRequest):
+    """
+    Phase 1 POST endpoint: Accepts JSON payload with specific subreddits or queries.
+    """
+    subreddits_str = ",".join(
+        payload.subreddits) if payload.subreddits else None
+    return run_extraction(subreddits = subreddits_str)
+
+
+@app.get("/RunExtraction/stream")
+async def run_extraction_stream(subreddits: Optional[str] = None):
+    """
+    Phase 1 (Server-Sent Events / Streaming):
+    Streams live progress events and extracted post chunks to the client.
+    Frontend can subscribe with:
+      const es = new EventSource('http://127.0.0.1:8000/RunExtraction/stream');
+      es.onmessage = (e) => { const event = JSON.parse(e.data); ... };
+    """
+    subreddit_list = (
+        [s.strip().replace("r/", "") for s in subreddits.split(",") if
+         s.strip()]
+        if subreddits
+        else None
+    )
+
+
+    async def event_generator():
+        try:
+            yield f"data: {json.dumps({'type': 'status', 'stage': 'init', 'message': 'Initializing database...'})}\n\n"
+            await asyncio.sleep(0.05)
+            init_db()
+
+            target_subs = subreddit_list or settings.DEFAULT_SUBREDDITS
+            yield f"data: {json.dumps({'type': 'status', 'stage': 'scout', 'message': f'Scouting {len(target_subs)} community(ies) with optimized boolean queries...', 'subreddits': target_subs})}\n\n"
+            await asyncio.sleep(0.05)
+
+            scout = ScoutBotPipeline(subreddits = subreddit_list)
+            scout_ok = await asyncio.to_thread(scout.run)
+            if not scout_ok:
+                yield f"data: {json.dumps({'type': 'warning', 'stage': 'scout', 'message': 'No software-solvable opportunities found in scout phase.'})}\n\n"
+
+            yield f"data: {json.dumps({'type': 'status', 'stage': 'ingress', 'message': 'Fetching full discussions and comments...'})}\n\n"
+            await asyncio.sleep(0.05)
+
+            ingress = IngressPipeline()
+            await asyncio.to_thread(ingress.run)
+
+            session = get_session()
+            try:
+                repo = PostRepository(session)
+                posts = repo.get_all_posts()
+                recent_posts = [
+                    {
+                        "id": p.id,
+                        "submission_id": p.submission_id,
+                        "subreddit": p.subreddit,
+                        "title": p.title,
+                        "score": p.score,
+                        "number_of_comments": p.number_of_comments,
+                        "post_url": p.post_url,
+                    }
+                    for p in posts[-20:]
+                ]
+            finally:
+                session.close()
+
+            # Stream each discovered post as an individual chunk
+            for post in recent_posts:
+                yield f"data: {json.dumps({'type': 'post_chunk', 'data': post})}\n\n"
+                await asyncio.sleep(0.02)
+
+            yield f"data: {json.dumps({'type': 'complete', 'success': True, 'message': 'Extraction completed successfully.', 'total': len(recent_posts)})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Error in extraction stream: {e}", exc_info = True)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+
+    return StreamingResponse(
+        event_generator(),
+        media_type = "text/event-stream",
+        headers = {
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.get("/Extractions")
@@ -240,8 +350,7 @@ def run_data_analysis():
     except Exception as err:
         logger.error(f"Failed to run processing layer: {err}")
         raise HTTPException(
-            status_code = 500,
-            detail = f"Data analysis phase failed: {err}"
+            status_code = 500, detail = f"Data analysis phase failed: {err}"
         )
 
 
@@ -270,7 +379,8 @@ def get_findings_data():
 def _execute_egress(choice: str, channel_name: str):
     try:
         logger.info(
-            f"Phase 3: Starting Egress pipeline for channel: {channel_name}...")
+            f"Phase 3: Starting Egress pipeline for channel: {channel_name}..."
+        )
         egress = EgressPipeline()
         status = run_pipeline(egress, choice)
         if not status:
@@ -292,7 +402,7 @@ def _execute_egress(choice: str, channel_name: str):
         logger.error(f"Failed to send reports by {channel_name}: {err}")
         raise HTTPException(
             status_code = 500,
-            detail = f"Egress phase failed for {channel_name}: {err}"
+            detail = f"Egress phase failed for {channel_name}: {err}",
         )
 
 
@@ -312,12 +422,6 @@ def send_report_by_email():
 def send_report_by_notion():
     """Phase 3: Deliver reports via Notion only."""
     return _execute_egress(settings.CHOICE_ONE, "Notion")
-
-
-# Alias to handle the legacy typo in initial draft (/SendByNotionl)
-@app.get("/SendByNotionl")
-def send_report_by_notion_alias():
-    return send_report_by_notion()
 
 
 @app.get("/RunAllProcesses")
@@ -358,4 +462,4 @@ def run_all_pipelines():
 
 
 if __name__ == "__main__":
-    uvicorn.run("routes:app", host = "127.0.0.1", port = 8000, reload = False)
+    uvicorn.run("routes:app", host = "127.0.0.1", port = 8000, reload = True)
