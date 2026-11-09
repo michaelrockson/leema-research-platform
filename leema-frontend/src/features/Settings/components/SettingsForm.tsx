@@ -15,21 +15,21 @@ import useSettings from "@/features/Settings/useSettingsForm.tsx";
 const settingsContent = {
   header: {
     description:
-      "Tell Leema where to look and how thorough to be. Everything here has a sensible default, so you only need to change what matters to you.",
+      "Choose where to search and which phrases may signal a problem. Your community and phrase changes are saved automatically.",
   },
   communities: {
-    title: "Where should we look?",
-    description: "Online communities to search for customer complaints.",
+    title: "Communities to search",
+    description: "Choose the online communities to search for conversations.",
   },
   phrases: {
-    title: "What should we listen for?",
+    title: "Phrases to look for",
     description:
-      "Words and phrases that signal someone is frustrated with a problem.",
+      "Words and phrases that may signal someone is struggling with a problem.",
   },
   counts: {
-    title: "How much should we read per community?",
-    repliesTitle: "Replies per conversation",
-    repliesDescription: "Higher numbers find more, but take longer to process.",
+    title: "How much should we review?",
+    repliesTitle: "Replies to review per conversation",
+    repliesDescription: "Reviewing more replies may find more insights, but takes longer.",
   },
 };
 

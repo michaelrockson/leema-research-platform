@@ -12,7 +12,8 @@ export default function FindingsDiscoveriesEmptyState() {
         />
       </CardContent>
       <CardDescription className="text-center text-sm text-muted-foreground">
-        There are currently no findings to display. Please check back later.
+        No problem insights yet. Run “Identify customer problems” after
+        collecting conversations.
       </CardDescription>
     </Card>
   );

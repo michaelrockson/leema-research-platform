@@ -10,6 +10,28 @@ from utils.logger import logger
 from utils.rate_limiter import reddit_limiter, reddit_retry
 
 
+def combine_search_queries(queries: List[str], chunk_size: int = 8) -> List[str]:
+    """
+    Groups a list of individual search query phrases into combined boolean OR search queries.
+    For example: ['tired of', 'frustrated', 'annoying'] -> ['("tired of" OR "frustrated" OR "annoying")']
+    This drastically cuts Reddit search API calls by up to 85-90% without losing coverage.
+    """
+    if not queries:
+        return []
+
+    combined = []
+    for i in range(0, len(queries), chunk_size):
+        chunk = queries[i : i + chunk_size]
+        formatted_terms = [
+            f'"{q.strip()}"' if not (q.strip().startswith('"') and q.strip().endswith('"')) else q.strip()
+            for q in chunk
+            if q.strip()
+        ]
+        if formatted_terms:
+            combined.append(f"({' OR '.join(formatted_terms)})")
+    return combined
+
+
 def serialize_comment(comment: Comment) -> Dict:
     """
     Serializes a Comment object into a dictionary.
