@@ -9,11 +9,6 @@ const defaultSettings = [
   "supplychain",
   "ecommerce",
   "entrepreneur",
-  "startups",
-  "procurement",
-  "retail",
-  "manufacturing",
-  "consulting",
 ];
 
 const defaultSignals = [
@@ -30,12 +25,6 @@ const defaultSignals = [
   "stressful",
   "time consuming",
   "manual process",
-  "repetitive",
-  "tedious",
-  "inefficient",
-  "disorganized",
-  "messy",
-  "confusing",
 ];
 
 export default function useSettings() {
