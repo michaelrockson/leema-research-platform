@@ -88,7 +88,8 @@ class Setting(Base):
     id = Column(Integer, primary_key = True, autoincrement = True)
     communities = Column(JSON, nullable = False)
     signals = Column(JSON, nullable = False)
-    conversations_per_community = Column(Integer, default = 50, nullable = False)
+    conversations_per_community = Column(Integer, default = 50,
+                                         nullable = False)
     replies_per_conversation = Column(Integer, default = 10, nullable = False)
     created_at = Column(
         DateTime(timezone = True),
@@ -101,6 +102,7 @@ class Setting(Base):
         onupdate = lambda: datetime.now(timezone.utc),
         nullable = False
     )
+
 
     def to_dict(self):
         return {
