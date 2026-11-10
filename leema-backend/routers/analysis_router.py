@@ -11,6 +11,34 @@ from utils.logger import logger
 
 router = APIRouter(tags = ["Analysis"])
 
+MAX_TITLE_WORDS = 12
+
+
+def _title_from_problem_statement(problem_statement: str) -> str:
+    """
+    Build a problem-specific title for briefs that have no HEADLINE.
+    Problem statements follow "X users struggle with Y, creating opportunity
+    for Z...", so the title keeps the "who + problem" part before the
+    opportunity clause, capped at MAX_TITLE_WORDS words.
+    """
+    problem_part = re.split(
+        r",?\s*(?:creating|which creates|presenting|offering|leading to)"
+        r"\s+(?:an?\s+)?(?:\w+\s+)?opportunit",
+        problem_statement,
+        maxsplit = 1,
+        flags = re.IGNORECASE,
+    )[0]
+    problem_part = re.split(r"(?<=[.!?])\s", problem_part, maxsplit = 1)[0]
+    problem_part = problem_part.strip().rstrip(".,;:")
+
+    words = problem_part.split()
+    if not words:
+        return "Customer problem"
+    title = " ".join(words[:MAX_TITLE_WORDS])
+    if len(words) > MAX_TITLE_WORDS:
+        title += "…"
+    return title[0].upper() + title[1:]
+
 
 def _parse_brief_to_findings(briefs):
     """
@@ -21,6 +49,9 @@ def _parse_brief_to_findings(briefs):
         "feasibility": str,
         "description": str,
         "sentiment": str,
+        "source_url": str | None,
+        "source_upvotes": int | None,
+        "source_comments": int | None,
     }
     """
     findings = []
@@ -28,14 +59,33 @@ def _parse_brief_to_findings(briefs):
 
     for brief in briefs:
         content = brief.curated_content or ""
-        sections = re.split(r"(?=PROBLEM STATEMENT:)", content,
-                            flags = re.IGNORECASE)
+        # Newer briefs open each opportunity with HEADLINE; older ones with
+        # PROBLEM STATEMENT.
+        if re.search(r"HEADLINE:", content, flags = re.IGNORECASE):
+            section_marker = r"(?=HEADLINE:)"
+        else:
+            section_marker = r"(?=PROBLEM STATEMENT:)"
+        sections = re.split(section_marker, content, flags = re.IGNORECASE)
         sections = [section.strip() for section in sections if section.strip()]
 
         if not sections:
             sections = [content]
 
         for section in sections:
+            headline_match = re.search(
+                r"HEADLINE:\s*\"?([^\n\"]+)\"?", section,
+                flags = re.IGNORECASE
+            )
+            source_match = re.search(
+                r"SOURCE URL:\s*(https?://\S+)", section,
+                flags = re.IGNORECASE
+            )
+            upvotes_match = re.search(
+                r"SOURCE UPVOTES:\s*(-?\d+)", section, flags = re.IGNORECASE
+            )
+            comments_match = re.search(
+                r"SOURCE COMMENTS:\s*(\d+)", section, flags = re.IGNORECASE
+            )
             problem_match = re.search(
                 r"PROBLEM STATEMENT:\s*\"?([^\n\"]+)\"?", section,
                 flags = re.IGNORECASE
@@ -70,12 +120,22 @@ def _parse_brief_to_findings(briefs):
             elif "medium" in section.lower():
                 feasibility = "Medium"
 
+            if headline_match:
+                title = headline_match.group(1).strip()
+            else:
+                title = _title_from_problem_statement(description)
+
             findings.append({
                 "id": finding_id,
-                "title": "PROBLEM STATEMENT",
+                "title": title,
                 "feasibility": feasibility,
                 "description": description,
                 "sentiment": sentiment,
+                "source_url": source_match.group(1) if source_match else None,
+                "source_upvotes":
+                    int(upvotes_match.group(1)) if upvotes_match else None,
+                "source_comments":
+                    int(comments_match.group(1)) if comments_match else None,
             })
             finding_id += 1
 

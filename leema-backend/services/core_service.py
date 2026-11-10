@@ -1,3 +1,4 @@
+import re
 from typing import Dict, List
 
 from google.genai import errors
@@ -27,6 +28,7 @@ class CoreService:
         self.brief_repo = BriefRepository(self.session)
         self.agent = initialize_gemini()
         self.post_with_sentiments = []
+        self.sources_by_post_number: Dict[int, Dict] = {}
         self.curator_agent_response = None
 
 
@@ -53,6 +55,17 @@ class CoreService:
                     "sentiment_score": sentiment.sentiment_results
                 }
                 post_records.append(post_with_sentiments)
+                # Same link the "Source conversations" list used, falling
+                # back to the thread permalink when it is missing.
+                source_url = post.post_url or (
+                    f"https://www.reddit.com/r/{post.subreddit}"
+                    f"/comments/{post.submission_id}/"
+                )
+                self.sources_by_post_number[post.id] = {
+                    "url": source_url,
+                    "upvotes": post.score or 0,
+                    "comments": post.number_of_comments or 0,
+                }
 
             logger.info("Successfully queried posts with sentiments.")
 
@@ -116,6 +129,34 @@ class CoreService:
             raise RuntimeError(f"Agent terminated due to an error: {error}") from error
 
 
+    def _resolve_source_links(self, response_text: str) -> str:
+        """
+        Replace each "SOURCE POST: <post number>" line written by the agent
+        with the source post's link, upvotes and comment count. These come
+        from the posts the agent was actually given, so the agent never has
+        to reproduce them itself. Unknown post numbers are dropped.
+        """
+
+        def replace_source(match: re.Match) -> str:
+            source = self.sources_by_post_number.get(int(match.group(1)))
+            if source is None:
+                logger.warning(
+                    f"Curator cited unknown post number {match.group(1)}")
+                return ""
+            return (
+                f"SOURCE URL: {source['url']}\n"
+                f"SOURCE UPVOTES: {source['upvotes']}\n"
+                f"SOURCE COMMENTS: {source['comments']}"
+            )
+
+        return re.sub(
+            r"SOURCE POST:\s*\"?#?(\d+)\"?",
+            replace_source,
+            response_text,
+            flags = re.IGNORECASE,
+        )
+
+
     def store_curator_response(self):
         """
         Store the curator agent's response in the ProcessedBriefs table in the database.
@@ -130,7 +171,8 @@ class CoreService:
 
         try:
             if self.curator_agent_response is not None:
-                self.brief_repo.create_brief(self.curator_agent_response)
+                self.brief_repo.create_brief(
+                    self._resolve_source_links(self.curator_agent_response))
 
                 post_ids = []
                 for record in self.post_with_sentiments:

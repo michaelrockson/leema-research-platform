@@ -23,7 +23,6 @@ export default function useSettings() {
   const [communityError, setCommunityError] = useState<string | null>(null);
   const [signalError, setSignalError] = useState<string | null>(null);
 
-  // Fetch settings from the backend via settingsService before component renders dynamic data
   const loadSettings = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -45,7 +44,7 @@ export default function useSettings() {
           ? caughtError.message
           : "Failed to load settings from server";
       setError(errorMessage);
-      // Fall back to cached local settings
+
       const cached = settingsService.getCachedSettings();
       setCommunities(cached.communities);
       setSignals(cached.signals);
@@ -60,7 +59,6 @@ export default function useSettings() {
     loadSettings();
   }, [loadSettings]);
 
-  // Show the "Saved" indicator briefly; a newer save restarts the timer
   const flashSaveSuccess = () => {
     setSaveSuccess(true);
     if (saveSuccessTimer.current) clearTimeout(saveSuccessTimer.current);
@@ -73,7 +71,6 @@ export default function useSettings() {
     };
   }, []);
 
-  // Persist settings changes through the settings service to the backend
   const persistChanges = async (updates: Partial<SettingsState>) => {
     setIsSaving(true);
     setSaveSuccess(false);
@@ -119,7 +116,9 @@ export default function useSettings() {
   };
 
   const removeCommunity = (index: number) => {
-    const updated = communities.filter((_, communityIndex) => communityIndex !== index);
+    const updated = communities.filter(
+      (_, communityIndex) => communityIndex !== index,
+    );
     setCommunities(updated);
     persistChanges({
       communities: updated,

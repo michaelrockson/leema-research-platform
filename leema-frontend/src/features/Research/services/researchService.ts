@@ -1,4 +1,5 @@
 import { apiRequest, createEventSource } from "@/lib/apiClient";
+import type { FindingDataProps } from "@/features/Findings/types";
 
 export type ExtractedPost = {
   id: number;
@@ -26,13 +27,7 @@ export type ProcessDataResponse = {
   message: string;
   data: {
     findings_count: number;
-    findings: Array<{
-      id: number;
-      title: string;
-      feasibility: string;
-      description: string;
-      sentiment: string;
-    }>;
+    findings: FindingDataProps[];
   };
 };
 
@@ -64,16 +59,10 @@ export type StreamEvent =
   | { type: "error"; message: string };
 
 export const researchService = {
-  /**
-   * Run the complete 3-phase automated pipeline sequentially.
-   */
   async runAllPipelines(): Promise<RunAllResponse> {
     return apiRequest<RunAllResponse>("/api/v1/runallprocesses");
   },
 
-  /**
-   * Run Phase 1: Extraction & Ingestion synchronously.
-   */
   async runExtraction(subreddits?: string[]): Promise<ExtractionResponse> {
     const query =
       subreddits && subreddits.length > 0
@@ -82,9 +71,6 @@ export const researchService = {
     return apiRequest<ExtractionResponse>(`/api/v1/runextraction${query}`);
   },
 
-  /**
-   * Fetch existing extracted posts without triggering Reddit scraping.
-   */
   async getExtractions(): Promise<{
     phase: string;
     success: boolean;
@@ -93,16 +79,10 @@ export const researchService = {
     return apiRequest("/api/v1/extractions");
   },
 
-  /**
-   * Run Phase 2: Sentiment Analysis & Gemini Curator Agent.
-   */
   async processData(): Promise<ProcessDataResponse> {
     return apiRequest<ProcessDataResponse>("/api/v1/processdata");
   },
 
-  /**
-   * Stream Phase 1 extraction progress and discovered post chunks in real time via SSE.
-   */
   subscribeToExtractionStream(
     subreddits?: string[],
     callbacks?: {
@@ -110,14 +90,16 @@ export const researchService = {
       onPostChunk?: (post: ExtractedPost) => void;
       onComplete?: (total: number) => void;
       onError?: (error: Error) => void;
-    }
+    },
   ): () => void {
     const query =
       subreddits && subreddits.length > 0
         ? `?subreddits=${encodeURIComponent(subreddits.join(","))}`
         : "";
 
-    const eventSource = createEventSource(`/api/v1/runextraction/stream${query}`);
+    const eventSource = createEventSource(
+      `/api/v1/runextraction/stream${query}`,
+    );
 
     eventSource.onmessage = (event) => {
       try {
@@ -136,7 +118,9 @@ export const researchService = {
         }
       } catch (parseError) {
         callbacks?.onError?.(
-          parseError instanceof Error ? parseError : new Error("Failed to parse SSE payload")
+          parseError instanceof Error
+            ? parseError
+            : new Error("Failed to parse SSE payload"),
         );
       }
     };

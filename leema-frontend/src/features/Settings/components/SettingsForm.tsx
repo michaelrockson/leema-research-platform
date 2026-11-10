@@ -114,13 +114,13 @@ export default function SettingsForm() {
         </div>
 
         <Button
-            variant="destructive"
-            size="sm"
-            onClick={resetToDefaults}
-            className="text-xs"
-          >
-            Reset to Defaults
-          </Button>
+          variant="destructive"
+          size="sm"
+          onClick={resetToDefaults}
+          className="text-xs"
+        >
+          Reset to Defaults
+        </Button>
       </div>
 
       <FieldGroup className="flex flex-col gap-10">

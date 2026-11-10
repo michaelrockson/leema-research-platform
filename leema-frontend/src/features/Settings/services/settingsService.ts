@@ -72,20 +72,12 @@ function requireData(response: SettingsApiResponse | undefined): SettingsState {
 }
 
 export const settingsService = {
-  /**
-   * Alias for getSettings().
-   */
   async fetchSettings(): Promise<SettingsState> {
     return this.getSettings();
   },
 
-  /**
-   * Fetch settings from the backend API (/api/v1/settings) and cache them.
-   * Throws if the server can't be reached, so callers can surface the error.
-   */
   async getSettings(): Promise<SettingsState> {
-    const response =
-      await apiRequest<SettingsApiResponse>("/api/v1/settings");
+    const response = await apiRequest<SettingsApiResponse>("/api/v1/settings");
     const normalized = requireData(response);
     this.cacheSettings(normalized);
     return normalized;
@@ -97,14 +89,14 @@ export const settingsService = {
     } catch (error) {
       console.warn(
         "Failed to fetch settings from API, using cached/defaults:",
-        error
+        error,
       );
       return this.getCachedSettings();
     }
   },
 
   async updateSettings(
-    updates: Partial<SettingsState>
+    updates: Partial<SettingsState>,
   ): Promise<SettingsState> {
     const payload = {
       communities: updates.communities,
@@ -116,34 +108,27 @@ export const settingsService = {
         updates.replies_per_conversation ?? updates.repliesPerConversation,
     };
 
-    const response = await apiRequest<SettingsApiResponse>(
-      "/api/v1/settings",
-      {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      }
-    );
+    const response = await apiRequest<SettingsApiResponse>("/api/v1/settings", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
     const normalized = requireData(response);
     this.cacheSettings(normalized);
     return normalized;
   },
-
 
   async resetSettings(): Promise<SettingsState> {
     const response = await apiRequest<SettingsApiResponse>(
       "/api/v1/settings/reset",
       {
         method: "POST",
-      }
+      },
     );
     const normalized = requireData(response);
     this.cacheSettings(normalized);
     return normalized;
   },
 
-  /**
-   * Get cached settings synchronously from localStorage.
-   */
   getCachedSettings(): SettingsState {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -172,9 +157,6 @@ export const settingsService = {
     return defaultSettings;
   },
 
-  /**
-   * Write to localStorage cache.
-   */
   cacheSettings(settings: SettingsState): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));

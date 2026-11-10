@@ -207,6 +207,10 @@ WORKFLOW:
 
 For each validated opportunity, return:
 
+HEADLINE:
+"A short, plain-language headline of 12 words or fewer naming who is affected and the specific problem (e.g. Accounting teams are stuck on manual, error-prone work)."
+Every headline must be unique to its problem. Name the concrete group and the concrete friction from the posts; never use generic headlines like "Customer problem", "User frustration" or "Workflow issues".
+
 PROBLEM STATEMENT:
 "X users struggle with Y problem, creating opportunity for Z solution that achieves W outcome."
 
@@ -215,6 +219,9 @@ SENTIMENT INSIGHT:
 
 OPTIONAL (if strong signal):
 "Opportunity Strength: High / Medium / Low"
+
+SOURCE POST:
+The Post Number of the single post that best evidences this problem, as a bare integer (e.g. SOURCE POST: 12). Only use Post Numbers returned by `query_posts_with_sentiments()`.
 
 ---
 
