@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card.tsx";
-import type { FindingDataProps } from "@/features/FindingsTable/types";
+import type { FindingDataProps } from "@/features/FindingsTable/types.ts";
 
 const tagStyles = {
   positive:

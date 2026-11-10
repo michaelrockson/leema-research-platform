@@ -80,3 +80,37 @@ class ValidatedPost(Base):
         nullable = False
     )
     is_processed = Column(Boolean, default = False, nullable = False)
+
+
+class Setting(Base):
+    __tablename__ = "settings"
+
+    id = Column(Integer, primary_key = True, autoincrement = True)
+    communities = Column(JSON, nullable = False)
+    signals = Column(JSON, nullable = False)
+    conversations_per_community = Column(Integer, default = 50, nullable = False)
+    replies_per_conversation = Column(Integer, default = 10, nullable = False)
+    created_at = Column(
+        DateTime(timezone = True),
+        default = lambda: datetime.now(timezone.utc),
+        nullable = False
+    )
+    updated_at = Column(
+        DateTime(timezone = True),
+        default = lambda: datetime.now(timezone.utc),
+        onupdate = lambda: datetime.now(timezone.utc),
+        nullable = False
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "communities": self.communities or [],
+            "signals": self.signals or [],
+            "conversations_per_community": self.conversations_per_community,
+            "replies_per_conversation": self.replies_per_conversation,
+            "conversationsPerCommunity": self.conversations_per_community,
+            "repliesPerConversation": self.replies_per_conversation,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
