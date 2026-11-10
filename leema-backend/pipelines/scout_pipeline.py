@@ -1,4 +1,5 @@
 from typing import List, Optional
+
 from services.scout_bot_service import ScoutBotService
 from utils.logger import logger
 
@@ -10,8 +11,10 @@ class ScoutBotPipeline:
     """
 
 
-    def __init__(self, subreddits: Optional[List[str]] = None, search_queries: Optional[List[str]] = None):
-        self.service = ScoutBotService(subreddits=subreddits, search_queries=search_queries)
+    def __init__(self, subreddits: Optional[List[str]] = None,
+                 search_queries: Optional[List[str]] = None):
+        self.service = ScoutBotService(subreddits = subreddits,
+                                       search_queries = search_queries)
 
 
     def run(self):

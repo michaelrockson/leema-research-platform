@@ -27,11 +27,13 @@ class ScoutBotService:
     """
 
 
-    def __init__(self, subreddits: List[str] = None, search_queries: List[str] = None):
+    def __init__(self, subreddits: List[str] = None,
+                 search_queries: List[str] = None):
         self.subreddits = subreddits or settings.DEFAULT_SUBREDDITS
         raw_queries = search_queries or settings.SEARCH_QUERIES
         # Combine search queries into boolean OR groups to reduce API round-trips by up to 90%
-        self.search_queries = combine_search_queries(raw_queries, chunk_size=8)
+        self.search_queries = combine_search_queries(raw_queries,
+                                                     chunk_size = 8)
         self.min_score = settings.MIN_SCORE
         self.min_comments = settings.MIN_COMMENTS
         self.min_upvote_ratio = settings.MIN_UPVOTE_RATIO

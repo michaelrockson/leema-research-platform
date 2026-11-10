@@ -10,7 +10,8 @@ from utils.logger import logger
 from utils.rate_limiter import reddit_limiter, reddit_retry
 
 
-def combine_search_queries(queries: List[str], chunk_size: int = 8) -> List[str]:
+def combine_search_queries(queries: List[str], chunk_size: int = 8) -> List[
+    str]:
     """
     Groups a list of individual search query phrases into combined boolean OR search queries.
     For example: ['tired of', 'frustrated', 'annoying'] -> ['("tired of" OR "frustrated" OR "annoying")']
@@ -21,9 +22,11 @@ def combine_search_queries(queries: List[str], chunk_size: int = 8) -> List[str]
 
     combined = []
     for i in range(0, len(queries), chunk_size):
-        chunk = queries[i : i + chunk_size]
+        chunk = queries[i: i + chunk_size]
         formatted_terms = [
-            f'"{q.strip()}"' if not (q.strip().startswith('"') and q.strip().endswith('"')) else q.strip()
+            f'"{q.strip()}"' if not (
+                    q.strip().startswith('"') and q.strip().endswith(
+                    '"')) else q.strip()
             for q in chunk
             if q.strip()
         ]

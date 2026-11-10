@@ -160,6 +160,7 @@ async def run_extraction_stream(subreddits: Optional[str] = None):
         else settings.SEARCH_QUERIES
     )
 
+
     async def event_generator():
         try:
             yield f"data: {json.dumps({'type': 'status', 'stage': 'init', 'message': 'Initializing database...'})}\n\n"
@@ -213,6 +214,7 @@ async def run_extraction_stream(subreddits: Optional[str] = None):
         except Exception as e:
             logger.error(f"Error in extraction stream: {e}", exc_info = True)
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
 
     return StreamingResponse(
         event_generator(),
