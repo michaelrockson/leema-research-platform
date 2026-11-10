@@ -68,7 +68,7 @@ export const researchService = {
    * Run the complete 3-phase automated pipeline sequentially.
    */
   async runAllPipelines(): Promise<RunAllResponse> {
-    return apiRequest<RunAllResponse>("/RunAllProcesses");
+    return apiRequest<RunAllResponse>("/api/v1/runallprocesses");
   },
 
   /**
@@ -79,7 +79,7 @@ export const researchService = {
       subreddits && subreddits.length > 0
         ? `?subreddits=${encodeURIComponent(subreddits.join(","))}`
         : "";
-    return apiRequest<ExtractionResponse>(`/RunExtraction${query}`);
+    return apiRequest<ExtractionResponse>(`/api/v1/runextraction${query}`);
   },
 
   /**
@@ -90,14 +90,14 @@ export const researchService = {
     success: boolean;
     data: { total_posts_extracted: number; posts: ExtractedPost[] };
   }> {
-    return apiRequest("/Extractions");
+    return apiRequest("/api/v1/extractions");
   },
 
   /**
    * Run Phase 2: Sentiment Analysis & Gemini Curator Agent.
    */
   async processData(): Promise<ProcessDataResponse> {
-    return apiRequest<ProcessDataResponse>("/ProcessData");
+    return apiRequest<ProcessDataResponse>("/api/v1/processdata");
   },
 
   /**
@@ -117,7 +117,7 @@ export const researchService = {
         ? `?subreddits=${encodeURIComponent(subreddits.join(","))}`
         : "";
 
-    const eventSource = createEventSource(`/RunExtraction/stream${query}`);
+    const eventSource = createEventSource(`/api/v1/runextraction/stream${query}`);
 
     eventSource.onmessage = (event) => {
       try {

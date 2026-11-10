@@ -24,6 +24,7 @@ type DrawerStore = {
   drawerContent: React.ReactElement | null;
   drawerSaveButtonLabel: string;
   drawerCancelButtonLabel: string;
+  onSave?: () => void;
 };
 
 export default function DrawerStore({
@@ -31,7 +32,7 @@ export default function DrawerStore({
 }: {
   drawerProps: DrawerStore;
 }) {
-  const { ButtonLabel, buttonClassName, buttonVariant } = drawerProps;
+  const { ButtonLabel, buttonClassName, buttonVariant, onSave } = drawerProps;
 
   const renderButtonLabel = () => {
     if (typeof ButtonLabel === "string") return ButtonLabel;
@@ -66,9 +67,18 @@ export default function DrawerStore({
         </div>
         <DrawerFooter>
           <div className="flex justify-end gap-4">
-            <Button className="px-6 py-6">
+            <DrawerClose
+              render={
+                <Button
+                  className="px-6 py-6"
+                  onClick={() => {
+                    if (onSave) onSave();
+                  }}
+                />
+              }
+            >
               {drawerProps.drawerSaveButtonLabel}
-            </Button>
+            </DrawerClose>
             <DrawerClose
               render={<Button variant="outline" className="px-6 py-6" />}
             >

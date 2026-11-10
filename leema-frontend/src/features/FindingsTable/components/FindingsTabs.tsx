@@ -4,11 +4,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs.tsx";
-import FindingsCard from "@/features/FindingsTable/components/sub-components/FindingsCard.tsx";
-import type { FindingDataProps } from "@/features/FindingsTable/types";
+import FindingsCard from "@/features/FindingsTable/components/FindingsCard.tsx";
+import type { FindingDataProps } from "@/features/FindingsTable/types.ts";
 import type { ExtractedPost } from "@/features/ResearchTable/services/researchService.ts";
-import FindingsDiscoveriesEmptyState from "@/features/FindingsTable/components/sub-components/emptystates/FindingsDiscoveriesEmptyState.tsx";
-import DiscoveredPostsList from "@/features/FindingsTable/components/sub-components/DiscoveredPostsList.tsx";
+import FindingsDiscoveriesEmptyState from "@/features/FindingsTable/components/emptystates/FindingsDiscoveriesEmptyState.tsx";
+import DiscoveredPostsList from "@/features/FindingsTable/components/DiscoveredPostsList.tsx";
 
 type FindingsTabsProps = {
   findingData: FindingDataProps[] | undefined;
@@ -23,10 +23,14 @@ export function FindingsTabs({
     <Tabs className="flex flex-col" defaultValue="findings">
       <TabsList variant="default" className="divide-y py-2 px-2">
         <TabsTrigger value="findings">
-          Problem insights {findingData && findingData.length > 0 ? `(${findingData.length})` : ""}
+          Problem insights{" "}
+          {findingData && findingData.length > 0
+            ? `(${findingData.length})`
+            : ""}
         </TabsTrigger>
         <TabsTrigger value="posts">
-          Source conversations {extractedPosts.length > 0 ? `(${extractedPosts.length})` : ""}
+          Source conversations{" "}
+          {extractedPosts.length > 0 ? `(${extractedPosts.length})` : ""}
         </TabsTrigger>
       </TabsList>
       <TabsContent value="findings" className="py-2 flex flex-col gap-4">

@@ -25,7 +25,7 @@ export const findingsService = {
    * Fetch current discovered problem briefs without re-running the curator agent.
    */
   async getFindings(): Promise<FindingDataProps[]> {
-    const response = await apiRequest<FindingsApiResponse>("/Findings");
+    const response = await apiRequest<FindingsApiResponse>("/api/v1/findings");
     return response.data?.findings || [];
   },
 
@@ -36,13 +36,13 @@ export const findingsService = {
     const normalized = channel.toLowerCase();
 
     if (normalized.includes("notion") && !normalized.includes("all")) {
-      return apiRequest<EgressApiResponse>("/SendByNotion");
+      return apiRequest<EgressApiResponse>("/api/v1/sendbynotion");
     }
 
     if (normalized.includes("email") && !normalized.includes("all")) {
-      return apiRequest<EgressApiResponse>("/SendByEmail");
+      return apiRequest<EgressApiResponse>("/api/v1/sendbyemail");
     }
 
-    return apiRequest<EgressApiResponse>("/SendAllChannels");
+    return apiRequest<EgressApiResponse>("/api/v1/sendallchannels");
   },
 };

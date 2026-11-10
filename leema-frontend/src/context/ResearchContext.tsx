@@ -136,10 +136,11 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
     }
   }, [setStageState]);
 
-  // Load existing findings and extractions from database on initial load
+  // Load existing findings, extractions, and settings from database on initial load
   useEffect(() => {
     refreshFindings();
     refreshExtractions();
+    settingsService.getSettings();
   }, [refreshFindings, refreshExtractions]);
 
   const updateCount = (id: number): void => {
@@ -163,7 +164,7 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
     setIsRunning(true);
     setRunError(null);
 
-    const userSettings = settingsService.getSettings();
+    const userSettings = await settingsService.getSettings();
 
     try {
       // Step 1: Extraction & Ingestion
@@ -225,7 +226,7 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    const userSettings = settingsService.getSettings();
+    const userSettings = await settingsService.getSettings();
 
     try {
       // Step 1: Extraction & Ingestion

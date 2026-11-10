@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button.tsx";
-import FindingsSelect from "@/features/FindingsTable/components/sub-components/FindingsSelect.tsx";
+import FindingsSelect from "@/features/FindingsTable/components/FindingsSelect.tsx";
 import { Card, CardContent, CardHeader } from "@/components/ui/card.tsx";
-import { FindingsTabs } from "@/features/FindingsTable/components/sub-components/FindingsTabs.tsx";
+import { FindingsTabs } from "@/features/FindingsTable/components/FindingsTabs.tsx";
 import { useResearchContext } from "@/context/ResearchContext.tsx";
 
 export default function FindingsTable() {
