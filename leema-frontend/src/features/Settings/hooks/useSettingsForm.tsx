@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { settingsService } from "@/features/Settings/services/settingsService.ts";
 import type { SettingsState } from "@/features/Settings/services/settingsService.ts";
 
@@ -7,6 +7,8 @@ export default function useSettings() {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const saveSuccessTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [communities, setCommunities] = useState<string[]>([]);
   const [signals, setSignals] = useState<string[]>([]);
@@ -21,7 +23,6 @@ export default function useSettings() {
   const [communityError, setCommunityError] = useState<string | null>(null);
   const [signalError, setSignalError] = useState<string | null>(null);
 
-  // Fetch settings from the backend via settingsService before component renders dynamic data
   const loadSettings = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -37,13 +38,13 @@ export default function useSettings() {
       setRepliesPerConversation(
         data.replies_per_conversation ?? data.repliesPerConversation ?? 10,
       );
-    } catch (err) {
-      const msg =
-        err instanceof Error
-          ? err.message
+    } catch (caughtError) {
+      const errorMessage =
+        caughtError instanceof Error
+          ? caughtError.message
           : "Failed to load settings from server";
-      setError(msg);
-      // Fall back to cached local settings
+      setError(errorMessage);
+
       const cached = settingsService.getCachedSettings();
       setCommunities(cached.communities);
       setSignals(cached.signals);
@@ -58,16 +59,32 @@ export default function useSettings() {
     loadSettings();
   }, [loadSettings]);
 
-  // Persist settings changes through the settings service to the backend
+  const flashSaveSuccess = () => {
+    setSaveSuccess(true);
+    if (saveSuccessTimer.current) clearTimeout(saveSuccessTimer.current);
+    saveSuccessTimer.current = setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (saveSuccessTimer.current) clearTimeout(saveSuccessTimer.current);
+    };
+  }, []);
+
   const persistChanges = async (updates: Partial<SettingsState>) => {
     setIsSaving(true);
     setSaveSuccess(false);
+    setSaveError(null);
     try {
       await settingsService.updateSettings(updates);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2500);
-    } catch (err) {
-      console.error("Failed to save settings to server:", err);
+      flashSaveSuccess();
+    } catch (caughtError) {
+      console.error("Failed to save settings to server:", caughtError);
+      setSaveError(
+        caughtError instanceof Error
+          ? `Not saved: ${caughtError.message}`
+          : "Not saved: could not reach the server",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -99,7 +116,9 @@ export default function useSettings() {
   };
 
   const removeCommunity = (index: number) => {
-    const updated = communities.filter((_, i) => i !== index);
+    const updated = communities.filter(
+      (_, communityIndex) => communityIndex !== index,
+    );
     setCommunities(updated);
     persistChanges({
       communities: updated,
@@ -135,7 +154,7 @@ export default function useSettings() {
   };
 
   const removeSignal = (index: number) => {
-    const updated = signals.filter((_, i) => i !== index);
+    const updated = signals.filter((_, signalIndex) => signalIndex !== index);
     setSignals(updated);
     persistChanges({
       communities,
@@ -167,14 +186,21 @@ export default function useSettings() {
 
   const resetToDefaults = async () => {
     setIsSaving(true);
+    setSaveError(null);
     try {
       const reset = await settingsService.resetSettings();
       setCommunities(reset.communities);
       setSignals(reset.signals);
       setConversationsPerCommunity(reset.conversations_per_community);
       setRepliesPerConversation(reset.replies_per_conversation);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2500);
+      flashSaveSuccess();
+    } catch (caughtError) {
+      console.error("Failed to reset settings on server:", caughtError);
+      setSaveError(
+        caughtError instanceof Error
+          ? `Reset failed: ${caughtError.message}`
+          : "Reset failed: could not reach the server",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -184,6 +210,7 @@ export default function useSettings() {
     isLoading,
     isSaving,
     saveSuccess,
+    saveError,
     error,
     communities,
     signals,

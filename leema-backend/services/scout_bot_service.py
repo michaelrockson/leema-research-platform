@@ -39,7 +39,7 @@ class ScoutBotService:
         self.min_upvote_ratio = settings.MIN_UPVOTE_RATIO
         self.reddit = None
         self.session = get_session()
-        self.sia = SentimentIntensityAnalyzer()
+        self.sentiment_analyzer = SentimentIntensityAnalyzer()
         self.gemini = initialize_gemini()
         self.search_results = []
         self.search_result_sentiments = []
@@ -49,7 +49,7 @@ class ScoutBotService:
         """
         Fans out all subreddit/query combinations via ``batched_gather()``
         (controlled batches with inter-batch delays) rather than a raw
-        ``asyncio.gather(*all_coros)`` to prevent overwhelming Reddit's
+        ``asyncio.gather(*all_coroutines)`` to prevent overwhelming Reddit's
         rate limits.
 
         Each individual ``search_one`` coroutine is itself decorated with
@@ -65,10 +65,10 @@ class ScoutBotService:
         self.reddit = await get_reddit_client()
 
         try:
-            coros = []
+            coroutines = []
             for subreddit in self.subreddits:
                 for query in self.search_queries:
-                    coros.append(search_one(
+                    coroutines.append(search_one(
                         self.reddit,
                         subreddit,
                         query,
@@ -78,7 +78,7 @@ class ScoutBotService:
                     ))
 
             logger.info(
-                f"Searching {len(coros)} subreddit/query pair(s) in batches of "
+                f"Searching {len(coroutines)} subreddit/query pair(s) in batches of "
                 f"{settings.REDDIT_BATCH_SIZE} (delay: {settings.REDDIT_BATCH_DELAY}s)."
             )
 
@@ -86,7 +86,7 @@ class ScoutBotService:
             # all coroutines simultaneously — the token-bucket rate limiter
             # inside each search_one call handles per-request throttling.
             raw_results = await batched_gather(
-                coros,
+                coroutines,
                 batch_size = settings.REDDIT_BATCH_SIZE,
                 batch_delay = settings.REDDIT_BATCH_DELAY,
             )
@@ -105,13 +105,13 @@ class ScoutBotService:
             )
             return search_results_list
 
-        except RuntimeError as e:
-            logger.error("Reddit instance check failed: %s", e)
+        except RuntimeError as error:
+            logger.error("Reddit instance check failed: %s", error)
             return []
 
-        except Exception as e:
+        except Exception as error:
             logger.error(
-                f"Unexpected error while querying Reddit API: {e}",
+                f"Unexpected error while querying Reddit API: {error}",
                 exc_info = True
             )
             return []
@@ -165,7 +165,7 @@ class ScoutBotService:
             for indexes in self.search_results:
                 for results in indexes:
                     result_batches: List[Dict] = []
-                    score: Dict[str, float] = self.sia.polarity_scores(
+                    score: Dict[str, float] = self.sentiment_analyzer.polarity_scores(
                         results.get("post_content", "Unknown"))
 
                     if score["compound"] > 0.05:
@@ -204,8 +204,8 @@ class ScoutBotService:
             self.search_result_sentiments = sentiment_collection
             return sentiment_collection
 
-        except Exception as e:
-            logger.error(f"Error analyzing search results: {e}",
+        except Exception as error:
+            logger.error(f"Error analyzing search results: {error}",
                          exc_info = True)
             return []
 
@@ -249,13 +249,13 @@ class ScoutBotService:
             logger.info(f"{agent_response}")
             return agent_response
 
-        except errors.ServerError as e:
-            logger.error(f"Gemini server error: {e}")
+        except errors.ServerError as error:
+            logger.error(f"Gemini server error: {error}")
             return {
                 "error": "Model temporarily unavailable. Please try again later."}
 
-        except errors.ClientError as e:
-            if "RESOURCE_EXHAUSTED" in str(e):
+        except errors.ClientError as error:
+            if "RESOURCE_EXHAUSTED" in str(error):
                 logger.error(
                     "Quota exceeded and all retries exhausted. "
                     "Try again after reset or switch models."
@@ -263,10 +263,10 @@ class ScoutBotService:
                 return {"error": "Quota exceeded"}
             raise
 
-        except Exception as e:
+        except Exception as error:
             logger.error(
-                f"Unexpected error while running Gemini validation agent {e}")
-            raise RuntimeError(f"Agent terminated due to an error: {e}")
+                f"Unexpected error while running Gemini validation agent {error}")
+            raise RuntimeError(f"Agent terminated due to an error: {error}")
 
 
     def store_validated_posts(self, post_ids: List[str]) -> Dict:
@@ -316,9 +316,9 @@ class ScoutBotService:
                 f"store_validated_posts complete: {stored} stored, {skipped} skipped."
             )
 
-        except Exception as e:
+        except Exception as error:
             self.session.rollback()
-            logger.error(f"Failed to store validated posts: {e}",
+            logger.error(f"Failed to store validated posts: {error}",
                          exc_info = True)
             return {"stored": 0, "skipped": 0}
 
@@ -341,9 +341,9 @@ class ScoutBotService:
                 ValidatedPost.is_processed == False
             ).count()
             return count > 0
-        except Exception as e:
+        except Exception as error:
             logger.error(
-                f"Error checking for unprocessed validated posts: {e}")
+                f"Error checking for unprocessed validated posts: {error}")
             return False
         finally:
             self.session.close()

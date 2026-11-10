@@ -20,7 +20,7 @@ def initialize_gemini() -> genai.Client:
         genai.Client: The initialized Gemini client.
 
     Raises:
-        SystemExit: If the API key is missing or client construction fails.
+        RuntimeError: If the API key is missing or client construction fails.
     """
     global _gemini_instance
 
@@ -32,18 +32,19 @@ def initialize_gemini() -> genai.Client:
 
     if not api_key:
         logger.error("GEMINI_API_KEY not found in environment variables.")
-        raise SystemExit(
-            "Startup failed: Please set your GEMINI_API_KEY to initialize the agent.")
+        raise RuntimeError(
+            "Please set your GEMINI_API_KEY to initialize the agent.")
 
     try:
         _gemini_instance = genai.Client(api_key = api_key)
         logger.info("Gemini client initialized successfully. Agent is ready.")
         return _gemini_instance
 
-    except Exception as e:
-        logger.exception(f"Failed to initialize Gemini client: {e}")
-        raise SystemExit(
-            "Gemini initialization failed. Check your API key and SDK setup.")
+    except Exception as error:
+        logger.exception(f"Failed to initialize Gemini client: {error}")
+        raise RuntimeError(
+            "Gemini initialization failed. Check your API key and SDK setup."
+        ) from error
 
 
 def provide_agent_tools(tools) -> types.GenerateContentConfig | None:
@@ -56,6 +57,6 @@ def provide_agent_tools(tools) -> types.GenerateContentConfig | None:
             f"Agent tools configured successfully with {len(tools)} tool(s).")
         return config
 
-    except Exception as e:
-        logger.exception(f"Failed to configure agent tools: {e}")
+    except Exception as error:
+        logger.exception(f"Failed to configure agent tools: {error}")
         return None

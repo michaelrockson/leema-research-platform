@@ -18,7 +18,7 @@ const saveOptions = [
 
 type FindingsSelectProps = {
   value?: string;
-  onValueChange?: (val: string) => void;
+  onValueChange?: (selectedValue: string) => void;
 };
 
 export default function FindingsSelect({
@@ -34,9 +34,9 @@ export default function FindingsSelect({
     <Select
       items={saveOptions}
       value={currentValue}
-      onValueChange={(val) => {
-        if (typeof val === "string") {
-          handleChange(val);
+      onValueChange={(selectedValue) => {
+        if (typeof selectedValue === "string") {
+          handleChange(selectedValue);
         }
       }}
     >

@@ -24,6 +24,10 @@ class SentimentPipeline:
             posts = self.service.query_posts_with_comments()
 
             if not posts:
+                if self.service.has_posts_awaiting_curation():
+                    logger.info(
+                        "No new posts to score; existing scored posts are awaiting curation.")
+                    return True
                 logger.warning(
                     "No posts available for sentiment analysis. Stopping pipeline.")
                 return False
@@ -40,7 +44,7 @@ class SentimentPipeline:
             logger.info("Sentiment pipeline complete")
             return True
 
-        except Exception as e:
-            logger.error(f"Error in Sentiment Analysis pipeline: {e}",
+        except Exception as error:
+            logger.error(f"Error in Sentiment Analysis pipeline: {error}",
                          exc_info = True)
             return False

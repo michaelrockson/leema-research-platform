@@ -24,8 +24,9 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("Initializing database and seeding default settings...")
         init_db()
-    except Exception as e:
-        logger.error(f"Application startup initialization failed: {e}")
+    except Exception as error:
+        logger.error(f"Application startup initialization failed: {error}")
+        raise
     yield
 
 
@@ -59,4 +60,4 @@ api_router.include_router(orchestration_router)
 app.include_router(api_router)
 
 if __name__ == "__main__":
-    uvicorn.run("routes:app", host = "127.0.0.1", port = 8000, reload = True)
+    uvicorn.run("server:app", host = "127.0.0.1", port = 8000, reload = True)

@@ -32,7 +32,7 @@ class IngressPipeline:
 
             return True
 
-        except Exception as e:
-            logger.error(f"Error executing Ingress pipeline: {e}",
+        except Exception as error:
+            logger.error(f"Error executing Ingress pipeline: {error}",
                          exc_info = True)
             return False

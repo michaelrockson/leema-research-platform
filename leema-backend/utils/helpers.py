@@ -21,14 +21,14 @@ def combine_search_queries(queries: List[str], chunk_size: int = 8) -> List[
         return []
 
     combined = []
-    for i in range(0, len(queries), chunk_size):
-        chunk = queries[i: i + chunk_size]
+    for chunk_start in range(0, len(queries), chunk_size):
+        chunk = queries[chunk_start: chunk_start + chunk_size]
         formatted_terms = [
-            f'"{q.strip()}"' if not (
-                    q.strip().startswith('"') and q.strip().endswith(
-                    '"')) else q.strip()
-            for q in chunk
-            if q.strip()
+            f'"{query.strip()}"' if not (
+                    query.strip().startswith('"') and query.strip().endswith(
+                    '"')) else query.strip()
+            for query in chunk
+            if query.strip()
         ]
         if formatted_terms:
             combined.append(f"({' OR '.join(formatted_terms)})")
@@ -289,8 +289,8 @@ def chunk_text(content: str, max_block_size: int = 2000) -> List[str]:
             full_blocks = total_characters // max_block_size
             remainder = total_characters % max_block_size
 
-            for i in range(full_blocks):
-                start_index = i * max_block_size
+            for block_number in range(full_blocks):
+                start_index = block_number * max_block_size
                 end_index = start_index + max_block_size
                 blocks.append(content[start_index:end_index])
 
@@ -300,11 +300,11 @@ def chunk_text(content: str, max_block_size: int = 2000) -> List[str]:
             blocks.append(content)
 
         logger.info(f"Total blocks created: {len(blocks)}")
-        for idx, block in enumerate(blocks):
-            logger.debug(f"Block {idx + 1} length: {len(block)}")
+        for block_index, block in enumerate(blocks):
+            logger.debug(f"Block {block_index + 1} length: {len(block)}")
 
-    except Exception as e:
-        logger.error(f"Error while chunking text: {e}", exc_info = True)
+    except Exception as error:
+        logger.error(f"Error while chunking text: {error}", exc_info = True)
 
     return blocks
 
@@ -337,8 +337,8 @@ def create_notion_blocks(text_blocks: List[str], safe_max: int = 1950) -> List[
 
         logger.info(f"Created {len(notion_blocks)} Notion blocks.")
 
-    except Exception as e:
-        logger.error(f"Error creating Notion blocks: {e}", exc_info = True)
+    except Exception as error:
+        logger.error(f"Error creating Notion blocks: {error}", exc_info = True)
 
     return notion_blocks
 
@@ -369,12 +369,12 @@ def format_email(
         )
         return rendered
 
-    except Exception as e:
-        logger.error(f"Email formatting failed: {e}", exc_info = True)
+    except Exception as error:
+        logger.error(f"Email formatting failed: {error}", exc_info = True)
         return ""
 
 
-async def _deliver_all_async(service: Any) -> None:
+async def _deliver_all_async(service: Any) -> List[bool]:
     """
     Runs Notion page creation and email delivery concurrently.
     Both underlying methods are synchronous (SMTP and notion-client SDKs), so
@@ -383,16 +383,19 @@ async def _deliver_all_async(service: Any) -> None:
 
     Args:
         service: An EgressService instance.
+
+    Returns:
+        List[bool]: [notion_ok, email_ok]
     """
     logger.info("Delivering to all channels...")
-    await asyncio.gather(
+    return await asyncio.gather(
         asyncio.to_thread(service.create_notion_page),
         asyncio.to_thread(service.send_email),
     )
 
 
 def send_by_channel(service: Any, choice: str, notion_only: str,
-                    email_only: str, all_channels: str) -> None:
+                    email_only: str, all_channels: str) -> bool:
     """
     Dispatch a processed brief to the appropriate output channels.
     When all_channels is selected, Notion and email are sent concurrently.
@@ -403,18 +406,28 @@ def send_by_channel(service: Any, choice: str, notion_only: str,
         notion_only (str): Config value representing the Notion-only choice.
         email_only (str): Config value representing the email-only choice.
         all_channels (str): Config value representing the all-channels choice.
+
+    Returns:
+        bool: True only if every requested channel delivered successfully.
     """
     if choice == all_channels:
-        asyncio.run(_deliver_all_async(service))
-        return
+        notion_ok, email_ok = asyncio.run(_deliver_all_async(service))
+        if not (notion_ok and email_ok):
+            logger.error(
+                f"Delivery incomplete: Notion={'ok' if notion_ok else 'failed'}, "
+                f"Email={'ok' if email_ok else 'failed'}")
+        return bool(notion_ok and email_ok)
 
     if choice == notion_only:
         logger.info("Publishing to Notion...")
-        service.create_notion_page()
+        return bool(service.create_notion_page())
 
     if choice == email_only:
         logger.info("Sending email report...")
-        service.send_email()
+        return bool(service.send_email())
+
+    logger.error(f"Unknown egress channel choice: {choice!r}")
+    return False
 
 
 def run_pipeline(pipeline, *args, **kwargs):

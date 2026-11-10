@@ -8,10 +8,11 @@ import React, {
 import {
   researchService,
   type ExtractedPost,
-} from "@/features/ResearchTable/services/researchService";
-import { findingsService } from "@/features/FindingsTable/services/findingsService";
+} from "@/features/Research/services/researchService";
+import { findingsService } from "@/features/Findings/services/findingsService";
+import { findingsExportService } from "@/features/Findings/services/findingsExportService";
 import { settingsService } from "@/features/Settings/services/settingsService";
-import type { FindingDataProps } from "@/features/FindingsTable/types";
+import type { FindingDataProps } from "@/features/Findings/types";
 
 export type Stages = {
   id: number;
@@ -41,8 +42,7 @@ const initialStages: Stages[] = [
   {
     id: 3,
     title: "Share your findings",
-    description:
-      "Send your results to a supported destination.",
+    description: "Send your results to a supported destination.",
     status: "IDLE",
     isRunning: false,
   },
@@ -55,6 +55,7 @@ type ResearchContextType = {
   updateCount: (id: number) => void;
   runFullResearchScan: () => Promise<void>;
   runSelectedStages: () => Promise<void>;
+  runStage: (stageId: number) => Promise<void>;
   isRunning: boolean;
   runError: string | null;
 
@@ -74,7 +75,7 @@ type ResearchContextType = {
 };
 
 const ResearchContext = createContext<ResearchContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function ResearchProvider({ children }: { children: React.ReactNode }) {
@@ -96,13 +97,15 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
   const setStageState = useCallback(
     (
       stageId: number,
-      state: { isRunning: boolean; status: Stages["status"] }
+      state: { isRunning: boolean; status: Stages["status"] },
     ) => {
-      setStages((prev) =>
-        prev.map((s) => (s.id === stageId ? { ...s, ...state } : s))
+      setStages((previousStages) =>
+        previousStages.map((stage) =>
+          stage.id === stageId ? { ...stage, ...state } : stage,
+        ),
       );
     },
-    []
+    [],
   );
 
   const refreshFindings = useCallback(async () => {
@@ -123,8 +126,8 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
   const refreshExtractions = useCallback(async () => {
     setIsLoadingPosts(true);
     try {
-      const res = await researchService.getExtractions();
-      const posts = res?.data?.posts || [];
+      const response = await researchService.getExtractions();
+      const posts = response?.data?.posts || [];
       if (posts.length > 0) {
         setExtractedPosts(posts);
         setStageState(1, { isRunning: false, status: "COMPLETED" });
@@ -140,17 +143,17 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshFindings();
     refreshExtractions();
-    settingsService.getSettings();
+    settingsService.getSettingsOrCached();
   }, [refreshFindings, refreshExtractions]);
 
   const updateCount = (id: number): void => {
     const isClicked = clickedMap[id] ?? false;
     if (!isClicked) {
-      setClickedMap((prev) => ({ ...prev, [id]: true }));
-      setStageCount((prev) => prev + 1);
+      setClickedMap((previousMap) => ({ ...previousMap, [id]: true }));
+      setStageCount((previousCount) => previousCount + 1);
     } else {
-      setClickedMap((prev) => ({ ...prev, [id]: false }));
-      setStageCount((prev) => prev - 1);
+      setClickedMap((previousMap) => ({ ...previousMap, [id]: false }));
+      setStageCount((previousCount) => previousCount - 1);
     }
   };
 
@@ -164,13 +167,13 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
     setIsRunning(true);
     setRunError(null);
 
-    const userSettings = await settingsService.getSettings();
+    const userSettings = await settingsService.getSettingsOrCached();
 
     try {
       // Step 1: Extraction & Ingestion
       setStageState(1, { isRunning: true, status: "RUNNING" });
       const extractRes = await researchService.runExtraction(
-        userSettings.communities
+        userSettings.communities,
       );
       if (extractRes.data?.recent_posts) {
         setExtractedPosts(extractRes.data.recent_posts);
@@ -189,14 +192,18 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
       setStageState(3, { isRunning: true, status: "RUNNING" });
       await findingsService.exportDiscoveries("All Channels");
       setStageState(3, { isRunning: false, status: "COMPLETED" });
-    } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Research scan execution failed";
-      setRunError(msg);
-      setStages((prev) =>
-        prev.map((s) =>
-          s.isRunning ? { ...s, isRunning: false, status: "FAILED" } : s
-        )
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Research scan execution failed";
+      setRunError(errorMessage);
+      setStages((previousStages) =>
+        previousStages.map((stage) =>
+          stage.isRunning
+            ? { ...stage, isRunning: false, status: "FAILED" }
+            : stage,
+        ),
       );
     } finally {
       setIsRunning(false);
@@ -205,68 +212,109 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Run ONLY the checked stages.
-   * Crucially: unselected stages NEVER enter a loading state!
    */
   const runSelectedStages = async (): Promise<void> => {
     const selectedIds = Object.entries(clickedMap)
       .filter(([, checked]) => checked)
       .map(([id]) => Number(id));
 
+    await runStages(selectedIds);
+  };
+
+  /**
+   * Run a single stage on its own.
+   */
+  const runStage = async (stageId: number): Promise<void> => {
+    await runStages([stageId]);
+  };
+
+  /**
+   * Run the given stages in order.
+   * Crucially: stages not in the list NEVER enter a loading state!
+   */
+  const runStages = async (selectedIds: number[]): Promise<void> => {
     if (selectedIds.length === 0 || isRunning) return;
 
     setIsRunning(true);
     setRunError(null);
 
     // Only mark the SELECTED stages as running
-    setStages((prev) =>
-      prev.map((stage) =>
+    setStages((previousStages) =>
+      previousStages.map((stage) =>
         selectedIds.includes(stage.id)
           ? { ...stage, isRunning: true, status: "RUNNING" }
-          : stage
-      )
+          : stage,
+      ),
     );
 
-    const userSettings = await settingsService.getSettings();
+    const userSettings = await settingsService.getSettingsOrCached();
 
     try {
       // Step 1: Extraction & Ingestion
       if (selectedIds.includes(1)) {
-        const res = await researchService.runExtraction(
-          userSettings.communities
+        const response = await researchService.runExtraction(
+          userSettings.communities,
         );
-        if (res.data?.recent_posts) {
-          setExtractedPosts(res.data.recent_posts);
+        if (response.data?.recent_posts) {
+          setExtractedPosts(response.data.recent_posts);
         }
         setStageState(1, { isRunning: false, status: "COMPLETED" });
       }
 
+      // Findings state won't update until the next render, so keep the
+      // freshest copy locally for step 3.
+      let latestFindings = findings;
+
       // Step 2: Pain Analysis & Opportunity Synthesis
       if (selectedIds.includes(2)) {
-        const res = await researchService.processData();
-        if (res.data?.findings) {
-          setFindings(res.data.findings);
+        const response = await researchService.processData();
+        if (response.data?.findings) {
+          latestFindings = response.data.findings;
+          setFindings(latestFindings);
         }
         setStageState(2, { isRunning: false, status: "COMPLETED" });
       }
 
       // Step 3: Export & Multi-Channel Delivery
       if (selectedIds.includes(3)) {
-        await findingsService.exportDiscoveries(selectedChannel || "All Channels");
+        await deliverFindings(
+          selectedChannel || "All Channels",
+          latestFindings,
+        );
         setStageState(3, { isRunning: false, status: "COMPLETED" });
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Step execution failed";
-      setRunError(msg);
-      setStages((prev) =>
-        prev.map((s) =>
-          selectedIds.includes(s.id)
-            ? { ...s, isRunning: false, status: "FAILED" }
-            : s
-        )
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Step execution failed";
+      setRunError(errorMessage);
+      setStages((previousStages) =>
+        previousStages.map((stage) =>
+          selectedIds.includes(stage.id)
+            ? { ...stage, isRunning: false, status: "FAILED" }
+            : stage,
+        ),
       );
     } finally {
       setIsRunning(false);
     }
+  };
+
+  /**
+   * Send findings to a channel. PDF and CSV are built and downloaded in the
+   * browser; every other channel goes through the backend.
+   * Returns a message describing what happened.
+   */
+  const deliverFindings = async (
+    channel: string,
+    findingsToDeliver: FindingDataProps[],
+  ): Promise<string> => {
+    if (findingsExportService.isFileExportFormat(channel)) {
+      await findingsExportService.exportFile(channel, findingsToDeliver);
+      return `Downloaded your findings as a ${channel} file.`;
+    }
+
+    const response = await findingsService.exportDiscoveries(channel);
+    return response.message || `Successfully sent via ${channel}!`;
   };
 
   const saveDiscoveries = async (channel?: string) => {
@@ -274,12 +322,12 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
     setIsSaving(true);
     setSaveMessage(null);
     try {
-      const res = await findingsService.exportDiscoveries(targetChannel);
-      setSaveMessage(res.message || `Successfully sent via ${targetChannel}!`);
+      setSaveMessage(await deliverFindings(targetChannel, findings));
       setStageState(3, { isRunning: false, status: "COMPLETED" });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to export report";
-      setSaveMessage(`Export error: ${msg}`);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to export report";
+      setSaveMessage(`Export error: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -294,6 +342,7 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
         updateCount,
         runFullResearchScan,
         runSelectedStages,
+        runStage,
         isRunning,
         runError,
         findings,
@@ -318,7 +367,7 @@ export function useResearchContext() {
   const context = useContext(ResearchContext);
   if (!context) {
     throw new Error(
-      "useResearchContext must be used within a ResearchProvider"
+      "useResearchContext must be used within a ResearchProvider",
     );
   }
   return context;

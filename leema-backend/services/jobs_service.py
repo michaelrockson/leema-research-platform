@@ -1,3 +1,5 @@
+import functools
+
 from database import get_session
 from database.init_db import init_db
 from pipelines.core_pipeline import CorePipeline
@@ -25,28 +27,6 @@ class JobService:
         self.egress_setting = settings.CHOICE_THREE
         self.session = get_session()
         self.post_repo = PostRepository(self.session)
-
-
-    def safe_run(self, function):
-        def wrapper(*args, **kwargs):
-            try:
-                logger.info(
-                    f"Running {function.__name__ if hasattr(function, '__name__')
-                    else 'anonymous function'}")
-
-                result = function(*args, **kwargs)
-                logger.info(
-                    f"Finished {function.__name__ if hasattr(function, '__name__')
-                    else 'anonymous function'}")
-                return result
-
-            except Exception:
-                logger.exception(
-                    f"Error running {function.__name__ if hasattr(function, '__name__')
-                    else 'anonymous function'}")
-
-
-        return wrapper
 
 
     def run_scout_bot(self):
@@ -110,9 +90,38 @@ class JobService:
             else:
                 logger.info("No curated data found to clean up")
 
-        except Exception as e:
+        except Exception as error:
             self.session.rollback()
-            logger.error(f"Error during curated data cleanup: {e}",
+            logger.error(f"Error during curated data cleanup: {error}",
                          exc_info = True)
         finally:
             self.session.close()
+
+
+def _safe_job(function):
+    @functools.wraps(function)
+    def wrapper():
+        name = function.__name__
+        try:
+            logger.info(f"Running {name}")
+            function()
+            logger.info(f"Finished {name}")
+        except Exception:
+            logger.exception(f"Error running {name}")
+
+    return wrapper
+
+
+@_safe_job
+def run_scout_bot_job():
+    JobService().run_scout_bot()
+
+
+@_safe_job
+def run_all_pipelines_job():
+    JobService().run_all_pipelines()
+
+
+@_safe_job
+def cleanup_curated_data_job():
+    JobService().cleanup_curated_data()

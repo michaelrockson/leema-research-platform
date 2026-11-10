@@ -45,59 +45,58 @@ export const defaultSettings: SettingsState = {
   repliesPerConversation: 10,
 };
 
+function normalizeSettings(data: SettingsState): SettingsState {
+  const conv =
+    data.conversations_per_community ?? data.conversationsPerCommunity ?? 50;
+  const rep =
+    data.replies_per_conversation ?? data.repliesPerConversation ?? 10;
+
+  return {
+    id: data.id,
+    communities: data.communities || [],
+    signals: data.signals || [],
+    conversations_per_community: conv,
+    replies_per_conversation: rep,
+    conversationsPerCommunity: conv,
+    repliesPerConversation: rep,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+  };
+}
+
+function requireData(response: SettingsApiResponse | undefined): SettingsState {
+  if (!response || !response.data) {
+    throw new Error("Server returned an empty settings response");
+  }
+  return normalizeSettings(response.data);
+}
+
 export const settingsService = {
-  /**
-   * Alias for getSettings().
-   */
   async fetchSettings(): Promise<SettingsState> {
     return this.getSettings();
   },
 
-  /**
-   * Fetch settings from the backend API (/api/v1/settings).
-   * Caches response in localStorage and returns normalized SettingsState.
-   */
   async getSettings(): Promise<SettingsState> {
-    try {
-      const response = await apiRequest<SettingsApiResponse>("/api/v1/settings");
-      if (response && response.data) {
-        const conv =
-          response.data.conversations_per_community ??
-          response.data.conversationsPerCommunity ??
-          50;
-        const rep =
-          response.data.replies_per_conversation ??
-          response.data.repliesPerConversation ??
-          10;
-
-        const normalized: SettingsState = {
-          id: response.data.id,
-          communities: response.data.communities || [],
-          signals: response.data.signals || [],
-          conversations_per_community: conv,
-          replies_per_conversation: rep,
-          conversationsPerCommunity: conv,
-          repliesPerConversation: rep,
-          created_at: response.data.created_at,
-          updated_at: response.data.updated_at,
-        };
-        this.cacheSettings(normalized);
-        return normalized;
-      }
-    } catch (err) {
-      console.warn(
-        "Failed to fetch settings from API, using cached/defaults:",
-        err
-      );
-    }
-    return this.getCachedSettings();
+    const response = await apiRequest<SettingsApiResponse>("/api/v1/settings");
+    const normalized = requireData(response);
+    this.cacheSettings(normalized);
+    return normalized;
   },
 
-  /**
-   * Update settings via PUT /api/v1/settings.
-   */
+  async getSettingsOrCached(): Promise<SettingsState> {
+    try {
+      return await this.getSettings();
+    } catch (error) {
+      console.warn(
+        "Failed to fetch settings from API, using cached/defaults:",
+        error,
+      );
+      return this.getCachedSettings();
+    }
+  },
+
   async updateSettings(
-    updates: Partial<SettingsState>
+    updates: Partial<SettingsState>,
   ): Promise<SettingsState> {
     const payload = {
       communities: updates.communities,
@@ -109,72 +108,27 @@ export const settingsService = {
         updates.replies_per_conversation ?? updates.repliesPerConversation,
     };
 
-    try {
-      const response = await apiRequest<SettingsApiResponse>(
-        "/api/v1/settings",
-        {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        }
-      );
-      if (response && response.data) {
-        const conv =
-          response.data.conversations_per_community ??
-          response.data.conversationsPerCommunity ??
-          50;
-        const rep =
-          response.data.replies_per_conversation ??
-          response.data.repliesPerConversation ??
-          10;
-
-        const normalized: SettingsState = {
-          id: response.data.id,
-          communities: response.data.communities || [],
-          signals: response.data.signals || [],
-          conversations_per_community: conv,
-          replies_per_conversation: rep,
-          conversationsPerCommunity: conv,
-          repliesPerConversation: rep,
-        };
-        this.cacheSettings(normalized);
-        return normalized;
-      }
-    } catch (err) {
-      console.error("Failed to update settings on server:", err);
-    }
-
-    // Fallback: update local cache
-    const current = this.getCachedSettings();
-    const merged = { ...current, ...updates };
-    this.cacheSettings(merged);
-    return merged;
+    const response = await apiRequest<SettingsApiResponse>("/api/v1/settings", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    const normalized = requireData(response);
+    this.cacheSettings(normalized);
+    return normalized;
   },
 
-  /**
-   * Reset settings to factory defaults via POST /api/v1/settings/reset.
-   */
   async resetSettings(): Promise<SettingsState> {
-    try {
-      const response = await apiRequest<SettingsApiResponse>(
-        "/api/v1/settings/reset",
-        {
-          method: "POST",
-        }
-      );
-      if (response && response.data) {
-        this.cacheSettings(response.data);
-        return response.data;
-      }
-    } catch (err) {
-      console.error("Failed to reset settings via API:", err);
-    }
-    this.cacheSettings(defaultSettings);
-    return defaultSettings;
+    const response = await apiRequest<SettingsApiResponse>(
+      "/api/v1/settings/reset",
+      {
+        method: "POST",
+      },
+    );
+    const normalized = requireData(response);
+    this.cacheSettings(normalized);
+    return normalized;
   },
 
-  /**
-   * Get cached settings synchronously from localStorage.
-   */
   getCachedSettings(): SettingsState {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -203,9 +157,6 @@ export const settingsService = {
     return defaultSettings;
   },
 
-  /**
-   * Write to localStorage cache.
-   */
   cacheSettings(settings: SettingsState): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));

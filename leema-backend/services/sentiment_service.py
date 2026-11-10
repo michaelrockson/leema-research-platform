@@ -22,7 +22,7 @@ class SentimentService:
         self.session = get_session()
         self.post_repo = PostRepository(self.session)
         self.sentiment_repo = SentimentRepository(self.session)
-        self.sia = SentimentIntensityAnalyzer()
+        self.sentiment_analyzer = SentimentIntensityAnalyzer()
         self.query_results: List[Dict] = []
         self.post_sentiment_scores: List[List[Dict]] = []
         self.post_sentiment_summaries: List[List[Dict]] = []
@@ -42,14 +42,16 @@ class SentimentService:
 
     def query_posts_with_comments(self) -> List[Dict]:
         """
-        Query all posts and their comments from the database.
+        Query uncurated posts that have not been scored yet, with their
+        comments. Posts that already have a sentiment record are skipped so
+        each run doesn't insert duplicate sentiment rows.
         Returns:
             List[Dict]: List of posts with associated comments.
         """
         post_records = []
 
         try:
-            posts = self.post_repo.get_all_posts()
+            posts = self.post_repo.get_posts_without_sentiment()
             total_comments = 0
 
             for post in posts:
@@ -65,12 +67,26 @@ class SentimentService:
             self.query_results = post_records
             return post_records
 
-        except Exception as e:
+        except Exception as error:
             logger.error(
-                f"Error querying posts with comments: {e}", exc_info = True)
+                f"Error querying posts with comments: {error}", exc_info = True)
             self.query_results = []
             return []
 
+        finally:
+            self.session.close()
+
+
+    def has_posts_awaiting_curation(self) -> bool:
+        """
+        True if there are scored posts that the curator hasn't processed yet.
+        """
+        try:
+            return bool(self.post_repo.get_posts_with_sentiments(limit = 1))
+        except Exception as error:
+            logger.error(f"Error checking posts awaiting curation: {error}",
+                         exc_info = True)
+            return False
         finally:
             self.session.close()
 
@@ -98,7 +114,7 @@ class SentimentService:
                 for comment in comments:
                     comment_text = comment.get("body", "")
                     post_key = posts.get("post_key", "")
-                    score = self.sia.polarity_scores(comment_text)
+                    score = self.sentiment_analyzer.polarity_scores(comment_text)
 
                     if score["compound"] > 0.05:
                         label = "Positive"
@@ -113,9 +129,9 @@ class SentimentService:
                     )
                 post_sentiment_scores.append(comment_sentiment_scores)
 
-        except Exception as e:
+        except Exception as error:
             logger.error(
-                f"Error during sentiment analysis: {e}", exc_info = True)
+                f"Error during sentiment analysis: {error}", exc_info = True)
             return []
 
         self.post_sentiment_scores = post_sentiment_scores
@@ -176,9 +192,9 @@ class SentimentService:
                 }
                 summaries.append(summary)
 
-        except Exception as e:
+        except Exception as error:
             logger.error(
-                f"Error summarizing post sentiment: {e}", exc_info = True)
+                f"Error summarizing post sentiment: {error}", exc_info = True)
             summaries = None
 
         logger.info("Sentiment Summarization Complete.")
@@ -219,8 +235,8 @@ class SentimentService:
 
             logger.info("Sentiment storage complete")
 
-        except Exception as e:
-            logger.error(f"Error storing post sentiment(s) {e}",
+        except Exception as error:
+            logger.error(f"Error storing post sentiment(s) {error}",
                          exc_info = True)
             self.session.rollback()
         finally:

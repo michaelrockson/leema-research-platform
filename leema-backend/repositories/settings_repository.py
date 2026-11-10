@@ -84,12 +84,12 @@ class SettingsRepository:
         Create a new setting record.
         """
         cleaned_communities = (
-            [c.strip().replace("r/", "") for c in communities if c.strip()]
+            [community.strip().replace("r/", "") for community in communities if community.strip()]
             if communities is not None
             else DEFAULT_COMMUNITIES
         )
         cleaned_signals = (
-            [s.strip() for s in signals if s.strip()]
+            [signal.strip() for signal in signals if signal.strip()]
             if signals is not None
             else DEFAULT_SIGNALS
         )
@@ -142,11 +142,11 @@ class SettingsRepository:
 
         if communities is not None:
             setting.communities = [
-                c.strip().replace("r/", "") for c in communities if c.strip()
+                community.strip().replace("r/", "") for community in communities if community.strip()
             ]
 
         if signals is not None:
-            setting.signals = [s.strip() for s in signals if s.strip()]
+            setting.signals = [signal.strip() for signal in signals if signal.strip()]
 
         if conversations_per_community is not None:
             setting.conversations_per_community = conversations_per_community

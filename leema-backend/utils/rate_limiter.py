@@ -1,6 +1,8 @@
 import asyncio
 import random
+import threading
 import time
+import weakref
 from typing import Any, Coroutine, List
 
 from tenacity import (
@@ -21,6 +23,13 @@ class AsyncRateLimiter:
 
     Combines an asyncio.Semaphore (concurrency cap) with a token bucket
     (requests-per-minute cap). Both must be satisfied before a call proceeds.
+
+    The pipelines call asyncio.run() once per stage (and FastAPI requests run
+    in worker threads), so this module-level singleton is used from many
+    different event loops over the process lifetime. asyncio primitives are
+    bound to the loop they first wait on, so a Semaphore/Lock pair is created
+    per event loop. The token bucket itself is shared across loops and
+    guarded by a threading.Lock so the rate cap stays process-wide.
     """
 
 
@@ -28,38 +37,65 @@ class AsyncRateLimiter:
                  max_concurrency: int = 5) -> None:
         self.max_rate = max_rate
         self.period = period
-        self._semaphore = asyncio.Semaphore(max_concurrency)
+        self.max_concurrency = max_concurrency
         self._tokens: float = float(max_rate)
         self._last_refill: float = time.monotonic()
-        self._lock = asyncio.Lock()
+        self._bucket_lock = threading.Lock()
+        self._loop_primitives: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, tuple[asyncio.Semaphore, asyncio.Lock]]" = weakref.WeakKeyDictionary()
+        self._primitives_lock = threading.Lock()
 
 
-    async def _refill(self) -> None:
-        now = time.monotonic()
-        elapsed = now - self._last_refill
-        self._tokens = min(float(self.max_rate), self._tokens + (
-            elapsed / self.period) * self.max_rate)
-        self._last_refill = now
+    def _primitives(self) -> "tuple[asyncio.Semaphore, asyncio.Lock]":
+        loop = asyncio.get_running_loop()
+        with self._primitives_lock:
+            prims = self._loop_primitives.get(loop)
+            if prims is None:
+                prims = (asyncio.Semaphore(self.max_concurrency),
+                         asyncio.Lock())
+                self._loop_primitives[loop] = prims
+            return prims
 
 
-    async def _acquire_token(self) -> None:
-        async with self._lock:
-            await self._refill()
-            while self._tokens < 1.0:
-                wait_time = (1.0 - self._tokens) / self.max_rate * self.period
+    def _try_take_token(self) -> float:
+        """
+        Refill the bucket and take a token if one is available.
+        Returns 0.0 on success, otherwise the seconds to wait before retrying.
+        """
+        with self._bucket_lock:
+            now = time.monotonic()
+            elapsed = now - self._last_refill
+            self._tokens = min(float(self.max_rate), self._tokens + (
+                elapsed / self.period) * self.max_rate)
+            self._last_refill = now
+            if self._tokens >= 1.0:
+                self._tokens -= 1.0
+                return 0.0
+            return (1.0 - self._tokens) / self.max_rate * self.period
+
+
+    async def _acquire_token(self, lock: asyncio.Lock) -> None:
+        async with lock:
+            while True:
+                wait_time = self._try_take_token()
+                if wait_time <= 0.0:
+                    return
                 await asyncio.sleep(wait_time + random.uniform(0.05, 0.3))
-                await self._refill()
-            self._tokens -= 1.0
 
 
     async def __aenter__(self) -> "AsyncRateLimiter":
-        await self._semaphore.acquire()
-        await self._acquire_token()
+        semaphore, lock = self._primitives()
+        await semaphore.acquire()
+        try:
+            await self._acquire_token(lock)
+        except BaseException:
+            semaphore.release()
+            raise
         return self
 
 
     async def __aexit__(self, *args: Any) -> None:
-        self._semaphore.release()
+        semaphore, _ = self._primitives()
+        semaphore.release()
 
 
 # =====================================================
@@ -81,9 +117,9 @@ gemini_limiter = AsyncRateLimiter(
 # =====================================================
 # RETRY HELPERS
 # =====================================================
-def _is_rate_limit_error(exc: Exception) -> bool:
-    msg = str(exc).lower()
-    return any(token in msg for token in (
+def _is_rate_limit_error(exception: Exception) -> bool:
+    error_text = str(exception).lower()
+    return any(token in error_text for token in (
         "429", "too many requests", "rate limit",
         "resource_exhausted", "ratelimit", "quota",
     ))
@@ -118,7 +154,7 @@ gemini_retry = retry(
 # BATCHED GATHER
 # =====================================================
 async def batched_gather(
-    coros: List[Coroutine],
+    coroutines: List[Coroutine],
     batch_size: int = 5,
     batch_delay: float = 1.5,
 ) -> List[Any]:
@@ -126,7 +162,7 @@ async def batched_gather(
     Runs coroutines in sequential batches to avoid API burst pressure.
 
     Args:
-        coros:       List of coroutines to execute.
+        coroutines:       List of coroutines to execute.
         batch_size:  Max coroutines to run concurrently per batch.
         batch_delay: Seconds to sleep between batches.
 
@@ -134,14 +170,14 @@ async def batched_gather(
         Flat list of results. Exceptions are returned in-place, not raised.
     """
     results: List[Any] = []
-    total = len(coros)
+    total = len(coroutines)
 
-    for i in range(0, total, batch_size):
-        batch = coros[i: i + batch_size]
+    for batch_start in range(0, total, batch_size):
+        batch = coroutines[batch_start: batch_start + batch_size]
         batch_results = await asyncio.gather(*batch, return_exceptions = True)
         results.extend(batch_results)
 
-        if batch_delay > 0 and i + batch_size < total:
+        if batch_delay > 0 and batch_start + batch_size < total:
             await asyncio.sleep(batch_delay)
 
     return results

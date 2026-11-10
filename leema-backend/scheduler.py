@@ -1,21 +1,38 @@
 from datetime import datetime, timedelta
 
+from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-from apscheduler.schedulers.background import BlockingScheduler
+from apscheduler.schedulers.blocking import BlockingScheduler
 
-from services.jobs_service import JobService
+from services.jobs_service import (
+    cleanup_curated_data_job,
+    run_all_pipelines_job,
+    run_scout_bot_job,
+)
 from utils.logger import logger
 
 job_stores = {
     'default': SQLAlchemyJobStore(url = 'sqlite:///jobs.sqlite')
 }
-scheduler = BlockingScheduler(jobstores = job_stores)
 
-agent_job = JobService()
+executors = {
+    'default': ThreadPoolExecutor(max_workers = 1)
+}
+
+job_defaults = {
+    'coalesce': True,
+    'misfire_grace_time': None,
+}
+
+scheduler = BlockingScheduler(
+    jobstores = job_stores,
+    executors = executors,
+    job_defaults = job_defaults,
+)
 
 # Schedule pipeline runs every week
 scheduler.add_job(
-    agent_job.safe_run(agent_job.run_scout_bot),
+    run_scout_bot_job,
     trigger = "interval",
     weeks = 1,
     next_run_time = datetime.now() + timedelta(seconds = 10),
@@ -25,7 +42,7 @@ scheduler.add_job(
 
 # Schedule pipeline runs every 2 weeks
 scheduler.add_job(
-    agent_job.safe_run(agent_job.run_all_pipelines),
+    run_all_pipelines_job,
     trigger = "interval",
     weeks = 2,
     next_run_time = datetime.now() + timedelta(seconds = 10),
@@ -35,7 +52,7 @@ scheduler.add_job(
 
 # Schedule cleanup runs every 2 weeks
 scheduler.add_job(
-    agent_job.safe_run(agent_job.cleanup_curated_data),
+    cleanup_curated_data_job,
     trigger = "interval",
     weeks = 2,
     next_run_time = datetime.now() + timedelta(days = 1),

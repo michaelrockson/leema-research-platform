@@ -1,5 +1,5 @@
 import { apiRequest } from "@/lib/apiClient";
-import type { FindingDataProps } from "@/features/FindingsTable/types";
+import type { FindingDataProps } from "@/features/Findings/types";
 
 export type FindingsApiResponse = {
   phase: "analysis";
@@ -43,6 +43,10 @@ export const findingsService = {
       return apiRequest<EgressApiResponse>("/api/v1/sendbyemail");
     }
 
-    return apiRequest<EgressApiResponse>("/api/v1/sendallchannels");
+    if (normalized.includes("all")) {
+      return apiRequest<EgressApiResponse>("/api/v1/sendallchannels");
+    }
+
+    throw new Error(`"${channel}" is not a channel the server can send to.`);
   },
 };
