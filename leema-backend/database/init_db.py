@@ -24,9 +24,9 @@ def init_db():
             settings_repo.seed_default_settings()
         finally:
             session.close()
-    except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
-        raise SystemExit
+    except Exception as error:
+        logger.error(f"Database initialization failed: {error}")
+        raise RuntimeError(f"Database initialization failed: {error}") from error
 
 
 if __name__ == "__main__":

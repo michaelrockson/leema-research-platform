@@ -50,12 +50,14 @@ class EgressService:
 
     def query_brief(self):
         """
-        Query the database for the first AI processed brief.
+        Query the database for the most recent AI processed brief, so each
+        report only delivers the newest findings rather than re-sending
+        older briefs.
         Returns:
             dict or None: Queried brief data or None if not found or error occurs.
         """
         try:
-            queried_brief = self.brief_repo.get_latest_brief()
+            queried_brief = self.brief_repo.get_latest_brief(limit = 1)
 
             if not queried_brief:
                 raise ValueError("No briefs found in the database.")
@@ -74,41 +76,56 @@ class EgressService:
             self.queried_brief = query_collection
             return query_collection
 
-        except Exception as e:
+        except Exception as error:
             logger.error(
-                f"Error querying briefs from the database: {e}",
+                f"Error querying briefs from the database: {error}",
                 exc_info = True)
             return None
 
 
-    def create_notion_page(self):
+    def _collect_content(self, channel: str) -> str | None:
         """
-        Create a Notion page with the chunked and formatted content blocks.
+        Load the latest brief (if not already loaded) and join its content.
+        Returns None if there is nothing to deliver.
         """
         if not self.queried_brief:
             self.query_brief()
             if not self.queried_brief:
-                logger.error(
-                    "No brief available. Aborting Notion page creation.")
-                return
+                logger.error(f"No brief available. Aborting {channel} delivery.")
+                return None
 
+        content = []
         for queried_content in self.queried_brief:
             if not queried_content or not queried_content.get(
                 "curated_content"):
-                logger.warning("No content available to format for Notion.")
-                return
+                logger.warning(f"No content available to format for {channel}.")
+                return None
+            content.append(queried_content.get("curated_content"))
 
-        content = []
+        return "\n\n".join(content)
 
-        for result in self.queried_brief:
-            content.append(result.get("curated_content"))
 
-        text_blocks = chunk_text("\n\n".join(content))
+    def create_notion_page(self) -> bool:
+        """
+        Create a Notion page with the chunked and formatted content blocks.
+        Returns:
+            bool: True if the page was created, False otherwise.
+        """
+        if not self.notion_key or not self.notion_parent_page:
+            logger.error(
+                "Notion is not configured (NOTION_API_KEY / NOTION_DB_ID missing).")
+            return False
+
+        content = self._collect_content("Notion")
+        if not content:
+            return False
+
+        text_blocks = chunk_text(content)
 
         if not text_blocks:
             logger.warning(
                 "No Notion blocks to publish. Aborting page creation...")
-            return
+            return False
 
         notion_blocks = create_notion_blocks(text_blocks)
         self.notion_blocks = notion_blocks
@@ -116,7 +133,7 @@ class EgressService:
         if not notion_blocks:
             logger.warning(
                 "No Notion blocks to publish. Aborting page creation...")
-            return
+            return False
 
         try:
             children_blocks = [
@@ -146,6 +163,7 @@ class EgressService:
             else:
                 logger.warning(
                     "Notion page creation response received but request_id missing.")
+            return True
 
         except APIResponseError as error:
             if error.code == APIErrorCode.ObjectNotFound:
@@ -154,36 +172,33 @@ class EgressService:
                     exc_info = True)
             else:
                 logger.error(f"Notion API error: {error}", exc_info = True)
-        except Exception as e:
+        except Exception as error:
             logger.error(
-                f"Unexpected error creating Notion page: {e}", exc_info = True)
+                f"Unexpected error creating Notion page: {error}", exc_info = True)
+        return False
 
 
-    def send_email(self, subject = "Reddit Problem Report!"):
+    def send_email(self, subject = "Reddit Problem Report!") -> bool:
         """
         Format and send the brief as an HTML email to the configured recipient.
         Args:
             subject (str): Subject line for the email.
+        Returns:
+            bool: True if the email was sent, False otherwise.
         """
-        if not self.queried_brief:
-            self.query_brief()
-            if not self.queried_brief:
-                logger.error("No brief available to format for email.")
-                return
+        if not (self.email_address and self.email_password
+                and self.recipient_address):
+            logger.error(
+                "Email is not configured (EMAIL_ADDRESS / EMAIL_APP_PASSWORD / "
+                "RECIPIENT_ADDRESS missing).")
+            return False
 
-        for queried_content in self.queried_brief:
-            if not queried_content or not queried_content.get(
-                "curated_content"):
-                logger.warning("No content available to format for email.")
-                return
-
-        content = []
-
-        for result in self.queried_brief:
-            content.append(result.get("curated_content"))
+        content = self._collect_content("email")
+        if not content:
+            return False
 
         self.formatted_email = format_email(
-            content = "\n\n".join(content),
+            content = content,
             jinja_env = self.jinja_env,
             title = self.title,
             footer_text = self.footer_text,
@@ -191,28 +206,30 @@ class EgressService:
 
         if not self.formatted_email:
             logger.warning("No data to email after formatting. Aborting send.")
-            return
+            return False
 
         try:
-            msg = EmailMessage()
-            msg["From"] = self.email_address
-            msg["To"] = self.recipient_address
-            msg["Subject"] = subject
-            msg.set_content("This email contains an HTML report.")
-            msg.add_alternative(self.formatted_email, subtype = "html")
+            email_message = EmailMessage()
+            email_message["From"] = self.email_address
+            email_message["To"] = self.recipient_address
+            email_message["Subject"] = subject
+            email_message.set_content("This email contains an HTML report.")
+            email_message.add_alternative(self.formatted_email, subtype = "html")
 
             logger.info(f"Sending email to {self.recipient_address}")
 
             with smtplib.SMTP("smtp.gmail.com", 587) as smtp_server:
                 smtp_server.starttls()
                 smtp_server.login(self.email_address, self.email_password)
-                smtp_server.send_message(msg)
+                smtp_server.send_message(email_message)
 
             logger.info("Email successfully sent.")
+            return True
 
         except SMTPAuthenticationError:
             logger.error("SMTP authentication failed.", exc_info = True)
         except SMTPConnectError:
             logger.error("SMTP connection failed.", exc_info = True)
-        except Exception as e:
-            logger.error(f"Email send failed: {e}", exc_info = True)
+        except Exception as error:
+            logger.error(f"Email send failed: {error}", exc_info = True)
+        return False

@@ -98,8 +98,8 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
       stageId: number,
       state: { isRunning: boolean; status: Stages["status"] }
     ) => {
-      setStages((prev) =>
-        prev.map((s) => (s.id === stageId ? { ...s, ...state } : s))
+      setStages((previousStages) =>
+        previousStages.map((stage) => (stage.id === stageId ? { ...stage, ...state } : stage))
       );
     },
     []
@@ -123,8 +123,8 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
   const refreshExtractions = useCallback(async () => {
     setIsLoadingPosts(true);
     try {
-      const res = await researchService.getExtractions();
-      const posts = res?.data?.posts || [];
+      const response = await researchService.getExtractions();
+      const posts = response?.data?.posts || [];
       if (posts.length > 0) {
         setExtractedPosts(posts);
         setStageState(1, { isRunning: false, status: "COMPLETED" });
@@ -140,17 +140,17 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshFindings();
     refreshExtractions();
-    settingsService.getSettings();
+    settingsService.getSettingsOrCached();
   }, [refreshFindings, refreshExtractions]);
 
   const updateCount = (id: number): void => {
     const isClicked = clickedMap[id] ?? false;
     if (!isClicked) {
-      setClickedMap((prev) => ({ ...prev, [id]: true }));
-      setStageCount((prev) => prev + 1);
+      setClickedMap((previousMap) => ({ ...previousMap, [id]: true }));
+      setStageCount((previousCount) => previousCount + 1);
     } else {
-      setClickedMap((prev) => ({ ...prev, [id]: false }));
-      setStageCount((prev) => prev - 1);
+      setClickedMap((previousMap) => ({ ...previousMap, [id]: false }));
+      setStageCount((previousCount) => previousCount - 1);
     }
   };
 
@@ -164,7 +164,7 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
     setIsRunning(true);
     setRunError(null);
 
-    const userSettings = await settingsService.getSettings();
+    const userSettings = await settingsService.getSettingsOrCached();
 
     try {
       // Step 1: Extraction & Ingestion
@@ -189,13 +189,13 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
       setStageState(3, { isRunning: true, status: "RUNNING" });
       await findingsService.exportDiscoveries("All Channels");
       setStageState(3, { isRunning: false, status: "COMPLETED" });
-    } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Research scan execution failed";
-      setRunError(msg);
-      setStages((prev) =>
-        prev.map((s) =>
-          s.isRunning ? { ...s, isRunning: false, status: "FAILED" } : s
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Research scan execution failed";
+      setRunError(errorMessage);
+      setStages((previousStages) =>
+        previousStages.map((stage) =>
+          stage.isRunning ? { ...stage, isRunning: false, status: "FAILED" } : stage
         )
       );
     } finally {
@@ -218,33 +218,33 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
     setRunError(null);
 
     // Only mark the SELECTED stages as running
-    setStages((prev) =>
-      prev.map((stage) =>
+    setStages((previousStages) =>
+      previousStages.map((stage) =>
         selectedIds.includes(stage.id)
           ? { ...stage, isRunning: true, status: "RUNNING" }
           : stage
       )
     );
 
-    const userSettings = await settingsService.getSettings();
+    const userSettings = await settingsService.getSettingsOrCached();
 
     try {
       // Step 1: Extraction & Ingestion
       if (selectedIds.includes(1)) {
-        const res = await researchService.runExtraction(
+        const response = await researchService.runExtraction(
           userSettings.communities
         );
-        if (res.data?.recent_posts) {
-          setExtractedPosts(res.data.recent_posts);
+        if (response.data?.recent_posts) {
+          setExtractedPosts(response.data.recent_posts);
         }
         setStageState(1, { isRunning: false, status: "COMPLETED" });
       }
 
       // Step 2: Pain Analysis & Opportunity Synthesis
       if (selectedIds.includes(2)) {
-        const res = await researchService.processData();
-        if (res.data?.findings) {
-          setFindings(res.data.findings);
+        const response = await researchService.processData();
+        if (response.data?.findings) {
+          setFindings(response.data.findings);
         }
         setStageState(2, { isRunning: false, status: "COMPLETED" });
       }
@@ -254,14 +254,14 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
         await findingsService.exportDiscoveries(selectedChannel || "All Channels");
         setStageState(3, { isRunning: false, status: "COMPLETED" });
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Step execution failed";
-      setRunError(msg);
-      setStages((prev) =>
-        prev.map((s) =>
-          selectedIds.includes(s.id)
-            ? { ...s, isRunning: false, status: "FAILED" }
-            : s
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Step execution failed";
+      setRunError(errorMessage);
+      setStages((previousStages) =>
+        previousStages.map((stage) =>
+          selectedIds.includes(stage.id)
+            ? { ...stage, isRunning: false, status: "FAILED" }
+            : stage
         )
       );
     } finally {
@@ -274,12 +274,12 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
     setIsSaving(true);
     setSaveMessage(null);
     try {
-      const res = await findingsService.exportDiscoveries(targetChannel);
-      setSaveMessage(res.message || `Successfully sent via ${targetChannel}!`);
+      const response = await findingsService.exportDiscoveries(targetChannel);
+      setSaveMessage(response.message || `Successfully sent via ${targetChannel}!`);
       setStageState(3, { isRunning: false, status: "COMPLETED" });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to export report";
-      setSaveMessage(`Export error: ${msg}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to export report";
+      setSaveMessage(`Export error: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }

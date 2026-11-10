@@ -22,9 +22,9 @@ class BriefRepository:
         return brief
 
 
-    def get_latest_brief(self) -> list[ProcessedBriefs]:
+    def get_latest_brief(self, limit: int = 10) -> list[ProcessedBriefs]:
         """
-        Retrieve the latest processed briefs.
+        Retrieve the most recent processed briefs, newest first.
         """
         return self.session.query(ProcessedBriefs).order_by(
-            ProcessedBriefs.id.asc()).limit(10).all()
+            ProcessedBriefs.id.desc()).limit(limit).all()

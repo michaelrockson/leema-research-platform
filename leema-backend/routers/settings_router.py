@@ -65,10 +65,10 @@ def get_active_settings():
             "message": "Settings retrieved successfully",
             "data": setting.to_dict(),
         }
-    except Exception as err:
-        logger.error(f"Failed to fetch settings: {err}")
+    except Exception as error:
+        logger.error(f"Failed to fetch settings: {error}")
         raise HTTPException(
-            status_code = 500, detail = f"Failed to fetch settings: {err}"
+            status_code = 500, detail = f"Failed to fetch settings: {error}"
         )
     finally:
         session.close()
@@ -96,10 +96,10 @@ def get_setting_by_id(setting_id: int):
         }
     except HTTPException:
         raise
-    except Exception as err:
-        logger.error(f"Failed to fetch setting {setting_id}: {err}")
+    except Exception as error:
+        logger.error(f"Failed to fetch setting {setting_id}: {error}")
         raise HTTPException(
-            status_code = 500, detail = f"Failed to fetch setting: {err}"
+            status_code = 500, detail = f"Failed to fetch setting: {error}"
         )
     finally:
         session.close()
@@ -121,10 +121,10 @@ def create_settings(payload: SettingsCreateRequest):
             "message": "Settings created successfully",
             "data": setting.to_dict(),
         }
-    except Exception as err:
-        logger.error(f"Failed to create settings: {err}")
+    except Exception as error:
+        logger.error(f"Failed to create settings: {error}")
         raise HTTPException(
-            status_code = 500, detail = f"Failed to create settings: {err}"
+            status_code = 500, detail = f"Failed to create settings: {error}"
         )
     finally:
         session.close()
@@ -149,10 +149,10 @@ def update_settings(
             "message": "Settings updated successfully",
             "data": setting.to_dict(),
         }
-    except Exception as err:
-        logger.error(f"Failed to update settings: {err}")
+    except Exception as error:
+        logger.error(f"Failed to update settings: {error}")
         raise HTTPException(
-            status_code = 500, detail = f"Failed to update settings: {err}"
+            status_code = 500, detail = f"Failed to update settings: {error}"
         )
     finally:
         session.close()
@@ -191,10 +191,10 @@ def delete_setting(setting_id: int):
         }
     except HTTPException:
         raise
-    except Exception as err:
-        logger.error(f"Failed to delete setting {setting_id}: {err}")
+    except Exception as error:
+        logger.error(f"Failed to delete setting {setting_id}: {error}")
         raise HTTPException(
-            status_code = 500, detail = f"Failed to delete setting: {err}"
+            status_code = 500, detail = f"Failed to delete setting: {error}"
         )
     finally:
         session.close()
@@ -214,10 +214,10 @@ def reset_settings():
             "message": "Settings reset to defaults successfully",
             "data": setting.to_dict(),
         }
-    except Exception as err:
-        logger.error(f"Failed to reset settings: {err}")
+    except Exception as error:
+        logger.error(f"Failed to reset settings: {error}")
         raise HTTPException(
-            status_code = 500, detail = f"Failed to reset settings: {err}"
+            status_code = 500, detail = f"Failed to reset settings: {error}"
         )
     finally:
         session.close()

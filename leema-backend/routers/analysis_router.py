@@ -30,30 +30,30 @@ def _parse_brief_to_findings(briefs):
         content = brief.curated_content or ""
         sections = re.split(r"(?=PROBLEM STATEMENT:)", content,
                             flags = re.IGNORECASE)
-        sections = [s.strip() for s in sections if s.strip()]
+        sections = [section.strip() for section in sections if section.strip()]
 
         if not sections:
             sections = [content]
 
-        for sec in sections:
+        for section in sections:
             problem_match = re.search(
-                r"PROBLEM STATEMENT:\s*\"?([^\n\"]+)\"?", sec,
+                r"PROBLEM STATEMENT:\s*\"?([^\n\"]+)\"?", section,
                 flags = re.IGNORECASE
             )
             sentiment_match = re.search(
-                r"SENTIMENT INSIGHT:\s*\"?([^\n\"]+)\"?", sec,
+                r"SENTIMENT INSIGHT:\s*\"?([^\n\"]+)\"?", section,
                 flags = re.IGNORECASE
             )
             strength_match = re.search(
                 r"(?:Opportunity Strength|feasibility):\s*\"?([^\n\"]+)\"?",
-                sec,
+                section,
                 flags = re.IGNORECASE,
             )
 
             if problem_match:
                 description = problem_match.group(1).strip()
             else:
-                description = sec.strip()
+                description = section.strip()
 
             if sentiment_match:
                 sentiment = sentiment_match.group(1).strip()
@@ -65,9 +65,9 @@ def _parse_brief_to_findings(briefs):
             feasibility = "High"
             if strength_match:
                 feasibility = strength_match.group(1).strip().capitalize()
-            elif "low" in sec.lower():
+            elif "low" in section.lower():
                 feasibility = "Low"
-            elif "medium" in sec.lower():
+            elif "medium" in section.lower():
                 feasibility = "Medium"
 
             findings.append({
@@ -120,10 +120,10 @@ def run_data_analysis():
                 "findings": findings,
             },
         }
-    except Exception as err:
-        logger.error(f"Failed to run processing layer: {err}")
+    except Exception as error:
+        logger.error(f"Failed to run processing layer: {error}")
         raise HTTPException(
-            status_code = 500, detail = f"Data analysis phase failed: {err}"
+            status_code = 500, detail = f"Data analysis phase failed: {error}"
         )
 
 

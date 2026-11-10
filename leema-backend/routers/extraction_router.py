@@ -47,9 +47,9 @@ def run_extraction(
 
         if subreddits:
             subreddit_list = [
-                s.strip().replace("r/", "")
-                for s in subreddits.split(",")
-                if s.strip()
+                subreddit.strip().replace("r/", "")
+                for subreddit in subreddits.split(",")
+                if subreddit.strip()
             ]
         elif active_settings and active_settings.communities:
             subreddit_list = active_settings.communities
@@ -58,7 +58,7 @@ def run_extraction(
 
         if queries:
             search_query_list = [
-                q.strip() for q in queries.split(",") if q.strip()
+                query.strip() for query in queries.split(",") if query.strip()
             ]
         elif active_settings and active_settings.signals:
             search_query_list = active_settings.signals
@@ -85,15 +85,15 @@ def run_extraction(
             posts = repo.get_all_posts()
             extracted_items = [
                 {
-                    "id": p.id,
-                    "submission_id": p.submission_id,
-                    "subreddit": p.subreddit,
-                    "title": p.title,
-                    "score": p.score,
-                    "number_of_comments": p.number_of_comments,
-                    "post_url": p.post_url,
+                    "id": post.id,
+                    "submission_id": post.submission_id,
+                    "subreddit": post.subreddit,
+                    "title": post.title,
+                    "score": post.score,
+                    "number_of_comments": post.number_of_comments,
+                    "post_url": post.post_url,
                 }
-                for p in posts[-20:]
+                for post in posts[-20:]
             ]
             total_count = len(posts)
         finally:
@@ -109,10 +109,10 @@ def run_extraction(
                 "recent_posts": extracted_items,
             },
         }
-    except Exception as err:
-        logger.error(f"Failed to run extraction process: {err}")
+    except Exception as error:
+        logger.error(f"Failed to run extraction process: {error}")
         raise HTTPException(
-            status_code = 500, detail = f"Extraction phase failed: {err}"
+            status_code = 500, detail = f"Extraction phase failed: {error}"
         )
 
 
@@ -145,9 +145,9 @@ async def run_extraction_stream(subreddits: Optional[str] = None):
 
     if subreddits:
         subreddit_list = [
-            s.strip().replace("r/", "")
-            for s in subreddits.split(",")
-            if s.strip()
+            subreddit.strip().replace("r/", "")
+            for subreddit in subreddits.split(",")
+            if subreddit.strip()
         ]
     elif active_settings and active_settings.communities:
         subreddit_list = active_settings.communities
@@ -191,15 +191,15 @@ async def run_extraction_stream(subreddits: Optional[str] = None):
                 posts = repo.get_all_posts()
                 recent_posts = [
                     {
-                        "id": p.id,
-                        "submission_id": p.submission_id,
-                        "subreddit": p.subreddit,
-                        "title": p.title,
-                        "score": p.score,
-                        "number_of_comments": p.number_of_comments,
-                        "post_url": p.post_url,
+                        "id": post.id,
+                        "submission_id": post.submission_id,
+                        "subreddit": post.subreddit,
+                        "title": post.title,
+                        "score": post.score,
+                        "number_of_comments": post.number_of_comments,
+                        "post_url": post.post_url,
                     }
-                    for p in posts[-20:]
+                    for post in posts[-20:]
                 ]
             finally:
                 session.close()
@@ -211,9 +211,9 @@ async def run_extraction_stream(subreddits: Optional[str] = None):
 
             yield f"data: {json.dumps({'type': 'complete', 'success': True, 'message': 'Extraction completed successfully.', 'total': len(recent_posts)})}\n\n"
 
-        except Exception as e:
-            logger.error(f"Error in extraction stream: {e}", exc_info = True)
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        except Exception as error:
+            logger.error(f"Error in extraction stream: {error}", exc_info = True)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(error)})}\n\n"
 
 
     return StreamingResponse(
@@ -243,15 +243,15 @@ def get_extracted_data():
                 "total_posts_extracted": len(posts),
                 "posts": [
                     {
-                        "id": p.id,
-                        "submission_id": p.submission_id,
-                        "subreddit": p.subreddit,
-                        "title": p.title,
-                        "score": p.score,
-                        "number_of_comments": p.number_of_comments,
-                        "post_url": p.post_url,
+                        "id": post.id,
+                        "submission_id": post.submission_id,
+                        "subreddit": post.subreddit,
+                        "title": post.title,
+                        "score": post.score,
+                        "number_of_comments": post.number_of_comments,
+                        "post_url": post.post_url,
                     }
-                    for p in posts
+                    for post in posts
                 ],
             },
         }

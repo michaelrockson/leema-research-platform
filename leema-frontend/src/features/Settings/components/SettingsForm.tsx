@@ -39,6 +39,7 @@ export default function SettingsForm() {
     isLoading,
     isSaving,
     saveSuccess,
+    saveError,
     error,
     communities,
     signals,
@@ -105,6 +106,11 @@ export default function SettingsForm() {
               <Check className="size-3" /> Saved
             </span>
           )}
+          {saveError && !isSaving && (
+            <span role="alert" className="text-destructive font-medium">
+              {saveError}
+            </span>
+          )}
         </div>
 
         <Button
@@ -160,9 +166,9 @@ export default function SettingsForm() {
                 setCommunityInput(event.target.value);
                 setCommunityError(null);
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
                   addCommunity();
                 }
               }}
@@ -222,9 +228,9 @@ export default function SettingsForm() {
                 setSignalInput(event.target.value);
                 setSignalError(null);
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
                   addSignal();
                 }
               }}
@@ -256,10 +262,10 @@ export default function SettingsForm() {
               type="number"
               min={1}
               value={conversationsPerCommunity}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                if (!isNaN(val) && val > 0) {
-                  updateConversationsPerCommunity(val);
+              onChange={(event) => {
+                const parsedCount = parseInt(event.target.value, 10);
+                if (!isNaN(parsedCount) && parsedCount > 0) {
+                  updateConversationsPerCommunity(parsedCount);
                 }
               }}
             />
@@ -275,10 +281,10 @@ export default function SettingsForm() {
               type="number"
               min={1}
               value={repliesPerConversation}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                if (!isNaN(val) && val > 0) {
-                  updateRepliesPerConversation(val);
+              onChange={(event) => {
+                const parsedCount = parseInt(event.target.value, 10);
+                if (!isNaN(parsedCount) && parsedCount > 0) {
+                  updateRepliesPerConversation(parsedCount);
                 }
               }}
             />

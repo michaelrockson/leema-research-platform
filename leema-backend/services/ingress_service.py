@@ -23,7 +23,6 @@ class IngressService:
 
     def __init__(self):
         self.reddit = None
-        self.validated_repo = ValidatedPostRepository()
         self.session = get_session()
         self.comment_limit = settings.DEFAULT_COMMENT_LIMIT
         self.posts = []
@@ -52,7 +51,7 @@ class IngressService:
         await self._ensure_reddit()
 
         try:
-            validated_repo = ValidatedPostRepository()
+            validated_repo = ValidatedPostRepository(self.session)
             unprocessed = validated_repo.get_unprocessed()
 
             if not unprocessed:
@@ -68,12 +67,12 @@ class IngressService:
                 f"fetch_validated_posts: {len(submission_ids)} validated IDs to scrape: {submission_ids}"
             )
 
-            coros = []
+            coroutines = []
             for submission_id in submission_ids:
-                coros.append(get_post_by_id(self.reddit, submission_id))
+                coroutines.append(get_post_by_id(self.reddit, submission_id))
 
             logger.info(
-                f"fetch_validated_posts: fetching {len(coros)} post(s) in "
+                f"fetch_validated_posts: fetching {len(coroutines)} post(s) in "
                 f"batches of {settings.REDDIT_BATCH_SIZE}."
             )
 
@@ -81,7 +80,7 @@ class IngressService:
             # rate limiter's concurrency cap; get_post_by_id is individually
             # guarded by reddit_limiter + reddit_retry.
             raw_results = await batched_gather(
-                coros,
+                coroutines,
                 batch_size = settings.REDDIT_BATCH_SIZE,
                 batch_delay = settings.REDDIT_BATCH_DELAY,
             )
@@ -89,15 +88,15 @@ class IngressService:
             posts = []
             processed_ids = []
 
-            for i, result in enumerate(raw_results):
+            for index, result in enumerate(raw_results):
                 if isinstance(result, Exception):
                     logger.error(
-                        f"Failed to fetch submission '{submission_ids[i]}': {result}",
+                        f"Failed to fetch submission '{submission_ids[index]}': {result}",
                         exc_info = True
                     )
                 else:
                     posts.append(result)
-                    processed_ids.append(submission_ids[i])
+                    processed_ids.append(submission_ids[index])
 
             if processed_ids:
                 validated_repo.mark_as_processed(processed_ids)
@@ -111,9 +110,9 @@ class IngressService:
                 f"fetch_validated_posts: collected {len(posts)} post(s).")
             return posts
 
-        except Exception as e:
+        except Exception as error:
             self.session.rollback()
-            logger.error(f"fetch_validated_posts failed: {e}", exc_info = True)
+            logger.error(f"fetch_validated_posts failed: {error}", exc_info = True)
             return []
 
         finally:
@@ -155,16 +154,16 @@ class IngressService:
         logger.info(
             f"Fetching comments from {len(self.submission_ids)} submissions concurrently...")
 
-        coros = []
+        coroutines = []
         for submission_id in self.submission_ids:
-            coros.append(
+            coroutines.append(
                 get_comments_from_submission(
                     self.reddit, submission_id, self.comment_limit
                 )
             )
 
         logger.info(
-            f"fetch_reddit_comments: fetching comments for {len(coros)} submission(s) "
+            f"fetch_reddit_comments: fetching comments for {len(coroutines)} submission(s) "
             f"in batches of {settings.REDDIT_BATCH_SIZE}."
         )
 
@@ -172,17 +171,17 @@ class IngressService:
         # rate limiter's concurrency cap; get_comments_from_submission is
         # individually guarded by reddit_limiter + reddit_retry.
         raw_results = await batched_gather(
-            coros,
+            coroutines,
             batch_size = settings.REDDIT_BATCH_SIZE,
             batch_delay = settings.REDDIT_BATCH_DELAY,
         )
 
         comments_collected = []
 
-        for i, result in enumerate(raw_results):
+        for index, result in enumerate(raw_results):
             if isinstance(result, Exception):
                 logger.error(
-                    f"Error fetching comments for submission {self.submission_ids[i]}: {result}",
+                    f"Error fetching comments for submission {self.submission_ids[index]}: {result}",
                     exc_info = True
                 )
             else:

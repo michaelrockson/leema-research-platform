@@ -33,16 +33,18 @@ class EgressPipeline:
                     "No brief available for egress. Stopping pipeline.")
                 return False
 
-            send_by_channel(
+            delivered = send_by_channel(
                 service = self.service,
                 choice = choice,
                 notion_only = self.notion_only,
                 email_only = self.email_only,
                 all_channels = self.all_channels,
             )
-            return True
+            if not delivered:
+                logger.error(f"Egress delivery via '{choice}' failed.")
+            return delivered
 
-        except Exception as e:
-            logger.error(f"Error executing Egress pipeline: {e}",
+        except Exception as error:
+            logger.error(f"Error executing Egress pipeline: {error}",
                          exc_info = True)
             return False

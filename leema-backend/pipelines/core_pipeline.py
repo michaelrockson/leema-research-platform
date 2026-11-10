@@ -37,7 +37,7 @@ class CorePipeline:
             logger.info("Core Curation pipeline complete")
             return True
 
-        except Exception as e:
-            logger.error(f"Error executing Core Curation pipeline: {e}",
+        except Exception as error:
+            logger.error(f"Error executing Core Curation pipeline: {error}",
                          exc_info = True)
             return False

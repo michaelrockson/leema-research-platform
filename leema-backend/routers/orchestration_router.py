@@ -37,9 +37,9 @@ def run_all_pipelines():
         }
     except HTTPException:
         raise
-    except Exception as err:
-        logger.error(f"Failed to run Leema Agent: {err}")
+    except Exception as error:
+        logger.error(f"Failed to run Leema Agent: {error}")
         raise HTTPException(
             status_code = 500,
-            detail = f"Full pipeline execution failed: {err}"
+            detail = f"Full pipeline execution failed: {error}"
         )

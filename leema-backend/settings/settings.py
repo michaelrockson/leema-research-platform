@@ -13,8 +13,8 @@ try:
     infisical = InfisicalSecretsService()
     infisical.authenticate_infisical_client()
     infisical.load_infisical_secrets()
-except Exception as e:
-    logger.error(f"Failed to load secrets from Infisical: {e}")
+except Exception as error:
+    logger.error(f"Failed to load secrets from Infisical: {error}")
 
 # =====================================================
 # REDDIT CONFIGURATION
@@ -62,12 +62,26 @@ CRITICAL_SECRETS = {
     "REDDIT_USER_AGENT": REDDIT_USER_AGENT,
     "GEMINI_API_KEY": GEMINI_API_KEY,
     "DATABASE_URL": DATABASE_URL,
-    "NOTION_API_KEY": NOTION_API_KEY,
-    "NOTION_DB_ID": NOTION_DB_ID,
-    "EMAIL_ADDRESS": EMAIL_ADDRESS,
-    "EMAIL_APP_PASSWORD": EMAIL_APP_PASSWORD,
-    "RECIPIENT_ADDRESS": RECIPIENT_ADDRESS,
 }
+
+OPTIONAL_CHANNEL_SECRETS = {
+    "Notion": {
+        "NOTION_API_KEY": NOTION_API_KEY,
+        "NOTION_DB_ID": NOTION_DB_ID,
+    },
+    "Email": {
+        "EMAIL_ADDRESS": EMAIL_ADDRESS,
+        "EMAIL_APP_PASSWORD": EMAIL_APP_PASSWORD,
+        "RECIPIENT_ADDRESS": RECIPIENT_ADDRESS,
+    },
+}
+
+for channel, channel_secrets in OPTIONAL_CHANNEL_SECRETS.items():
+    missing_channel = [secret_name for secret_name, secret_value in channel_secrets.items() if not secret_value]
+    if missing_channel:
+        logger.warning(
+            f"{channel} delivery disabled; missing: {', '.join(missing_channel)}"
+        )
 
 missing_critical = []
 

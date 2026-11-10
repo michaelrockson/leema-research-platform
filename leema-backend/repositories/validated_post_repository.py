@@ -1,4 +1,6 @@
-from typing import List
+from typing import List, Optional
+
+from sqlalchemy.orm import Session
 
 from database import get_session
 from database.models import ValidatedPost
@@ -14,8 +16,8 @@ class ValidatedPostRepository:
     """
 
 
-    def __init__(self):
-        self.session = get_session()
+    def __init__(self, session: Optional[Session] = None):
+        self.session = session if session is not None else get_session()
 
 
     def save(self, submission_id: str) -> ValidatedPost:

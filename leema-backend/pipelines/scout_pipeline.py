@@ -34,7 +34,7 @@ class ScoutBotPipeline:
 
             return True
 
-        except Exception as e:
-            logger.error(f"Error in Scout Bot pipeline: {e}",
+        except Exception as error:
+            logger.error(f"Error in Scout Bot pipeline: {error}",
                          exc_info = True)
             return False

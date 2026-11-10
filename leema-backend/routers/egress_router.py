@@ -17,7 +17,8 @@ def _execute_egress(choice: str, channel_name: str):
         status = run_pipeline(egress, choice)
         if not status:
             raise RuntimeError(
-                f"Egress delivery failed for channel '{channel_name}'. Ensure processed briefs exist in database."
+                f"Egress delivery failed for channel '{channel_name}'. Check that a processed brief exists "
+                f"and that the channel's credentials are configured; see server logs for details."
             )
 
         logger.info(f"Phase 3: Sent report via {channel_name}.")
@@ -30,11 +31,11 @@ def _execute_egress(choice: str, channel_name: str):
                 "status": "DELIVERED",
             },
         }
-    except Exception as err:
-        logger.error(f"Failed to send reports by {channel_name}: {err}")
+    except Exception as error:
+        logger.error(f"Failed to send reports by {channel_name}: {error}")
         raise HTTPException(
             status_code = 500,
-            detail = f"Egress phase failed for {channel_name}: {err}",
+            detail = f"Egress phase failed for {channel_name}: {error}",
         )
 
 

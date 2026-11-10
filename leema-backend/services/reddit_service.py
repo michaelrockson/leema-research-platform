@@ -95,6 +95,7 @@ class RedditService:
         session = get_session()
         post_repo = PostRepository(session)
         comment_repo = CommentRepository(session)
+        validated_ids = []
 
         try:
             logger.info("Storing posts")
@@ -103,20 +104,23 @@ class RedditService:
             session.commit()
             logger.info(f"Stored {stored_posts} posts.")
 
-        except Exception as e:
+        except Exception as error:
             session.rollback()
-            logger.error(f"Error storing posts: {e}", exc_info = True)
+            session.close()
+            logger.error(f"Error storing posts: {error}", exc_info = True)
             return
 
         try:
             logger.info("Storing comments")
-            stored_comments = comment_repo.store_comments(reddit_data)
+            
+            stored_comments = comment_repo.store_comments(
+                reddit_data, submission_ids = validated_ids)
             session.commit()
             logger.info(f"Stored {stored_comments} comments.")
 
-        except Exception as e:
+        except Exception as error:
             session.rollback()
-            logger.error(f"Error storing comments: {e}", exc_info = True)
+            logger.error(f"Error storing comments: {error}", exc_info = True)
 
         finally:
             session.close()

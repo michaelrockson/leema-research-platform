@@ -1,8 +1,9 @@
 from typing import List, Dict, Set
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from database.models import Post, CuratedItem
+from database.models import Post, CuratedItem, Sentiment
 
 
 class PostRepository:
@@ -54,14 +55,34 @@ class PostRepository:
 
     def get_posts_with_sentiments(self, limit: int = 10) -> List:
         """
-        Query posts that have not been curated yet, joined with their sentiments.
+        Query posts that have not been curated yet, each joined with its most
+        recent sentiment row (so a post is returned at most once even if
+        older duplicate sentiment rows exist).
         """
-        from database.models import Sentiment
+        latest_sentiment_ids = (
+            self.session.query(func.max(Sentiment.id))
+            .group_by(Sentiment.post_id)
+        )
         return (
             self.session.query(Post, Sentiment)
             .join(Sentiment, Sentiment.post_id == Post.submission_id)
             .filter(Post.is_curated == False)
+            .filter(Sentiment.id.in_(latest_sentiment_ids))
+            .order_by(Post.id.asc())
             .limit(limit)
+            .all()
+        )
+
+
+    def get_posts_without_sentiment(self) -> List[type[Post]]:
+        """
+        Retrieve uncurated posts that do not yet have a sentiment record.
+        """
+        return (
+            self.session.query(Post)
+            .outerjoin(Sentiment, Sentiment.post_id == Post.submission_id)
+            .filter(Post.is_curated == False)
+            .filter(Sentiment.id.is_(None))
             .all()
         )
 

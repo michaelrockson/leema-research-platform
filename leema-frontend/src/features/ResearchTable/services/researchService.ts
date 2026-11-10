@@ -134,15 +134,15 @@ export const researchService = {
           callbacks?.onError?.(new Error(payload.message));
           eventSource.close();
         }
-      } catch (err) {
+      } catch (parseError) {
         callbacks?.onError?.(
-          err instanceof Error ? err : new Error("Failed to parse SSE payload")
+          parseError instanceof Error ? parseError : new Error("Failed to parse SSE payload")
         );
       }
     };
 
-    eventSource.onerror = (err) => {
-      callbacks?.onError?.(new Error(`EventSource error: ${err}`));
+    eventSource.onerror = (errorEvent) => {
+      callbacks?.onError?.(new Error(`EventSource error: ${errorEvent}`));
       eventSource.close();
     };
 

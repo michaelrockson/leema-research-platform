@@ -59,11 +59,12 @@ class CoreService:
             self.post_with_sentiments = post_records
             return post_records
 
-        except Exception as e:
+        except Exception as error:
             logger.error(
-                f"Error querying posts with sentiments from the database!:{e}",
+                f"Error querying posts with sentiments from the database!:{error}",
                 exc_info = True)
-            raise SystemExit
+            raise RuntimeError(
+                f"Failed to query posts with sentiments: {error}") from error
 
 
     def execute_curator_agent(self):
@@ -95,13 +96,13 @@ class CoreService:
             self.curator_agent_response = curator_response
             return curator_response
 
-        except errors.ServerError as e:
-            logger.error(f"Gemini server error: {e}")
+        except errors.ServerError as error:
+            logger.error(f"Gemini server error: {error}")
             return {
                 "error": "Model temporarily unavailable. Please try again later."}
 
-        except errors.ClientError as e:
-            if "RESOURCE_EXHAUSTED" in str(e):
+        except errors.ClientError as error:
+            if "RESOURCE_EXHAUSTED" in str(error):
                 logger.error(
                     "Quota exceeded and all retries exhausted. "
                     "Try again after reset or switch models."
@@ -109,10 +110,10 @@ class CoreService:
                 return {"error": "Quota exceeded"}
             raise
 
-        except Exception as e:
+        except Exception as error:
             logger.error(
-                f"Unexpected error while running Market Scout Agent: {e}")
-            raise SystemExit("Agent terminated due to an error.")
+                f"Unexpected error while running Market Scout Agent: {error}")
+            raise RuntimeError(f"Agent terminated due to an error: {error}") from error
 
 
     def store_curator_response(self):
@@ -123,9 +124,9 @@ class CoreService:
             logger.info("Running agent for response")
             try:
                 self.execute_curator_agent()
-            except Exception as e:
+            except Exception as error:
                 logger.error(
-                    f"Failed to run curator agent: {e}", exc_info = True)
+                    f"Failed to run curator agent: {error}", exc_info = True)
 
         try:
             if self.curator_agent_response is not None:
@@ -146,15 +147,16 @@ class CoreService:
                     for sub_id in submission_ids:
                         self.post_repo.add_curated_item(sub_id)
 
-                    self.session.commit()
-                    logger.info("Curator response stored")
+                # Commit the brief even if no posts were marked as curated.
+                self.session.commit()
+                logger.info("Curator response stored")
             else:
                 logger.warning("Curated content is None. Skipping DB insert.")
 
-        except Exception as e:
+        except Exception as error:
             self.session.rollback()
             logger.error(
-                f"Failed to store curator response and update curation status: {e}",
+                f"Failed to store curator response and update curation status: {error}",
                 exc_info = True)
 
         finally:

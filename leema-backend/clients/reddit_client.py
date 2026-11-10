@@ -88,8 +88,8 @@ def _create_reddit_client() -> asyncpraw.Reddit | None:
         logger.info("asyncpraw Reddit client created successfully.")
         return reddit
 
-    except Exception as e:
-        logger.exception(f"Failed to initialize Reddit client: {e}")
+    except Exception as error:
+        logger.exception(f"Failed to initialize Reddit client: {error}")
         return None
 
 
@@ -125,8 +125,8 @@ async def close_reddit_client() -> None:
         try:
             await _reddit_instance.close()
             logger.info("asyncpraw Reddit client closed.")
-        except Exception as e:
-            logger.warning(f"Error while closing Reddit client: {e}")
+        except Exception as error:
+            logger.warning(f"Error while closing Reddit client: {error}")
         finally:
             _reddit_instance = None
             _reddit_lock = None
