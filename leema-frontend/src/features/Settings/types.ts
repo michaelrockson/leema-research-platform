@@ -11,8 +11,6 @@ export type ResearchSettings = {
   notion_database_id: string;
   agent_model: string;
   scout_model: string;
-  scout_objective: string;
-  validate_posts_objective: string;
   reddit_max_requests_per_min: number;
   reddit_max_concurrency: number;
   reddit_batch_size: number;

@@ -5,7 +5,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import type { TextFieldConfig } from "@/features/Settings/settingsFields";
 
 type TextSettingFieldProps = {
@@ -30,27 +29,16 @@ export default function TextSettingField({
     <Field data-invalid={Boolean(error)}>
       <FieldLabel htmlFor={inputId}>{field.label}</FieldLabel>
       <FieldDescription>{field.description}</FieldDescription>
-      {field.multiline ? (
-        <Textarea
-          id={inputId}
-          value={value}
-          aria-invalid={Boolean(error)}
-          spellCheck={false}
-          className="h-72 field-sizing-fixed font-mono text-xs leading-relaxed md:text-xs"
-          onChange={(event) => onChange(event.target.value)}
-        />
-      ) : (
-        <Input
-          id={inputId}
-          type={field.inputType ?? "text"}
-          autoComplete="off"
-          placeholder={field.placeholder}
-          value={value}
-          list={suggestionListId}
-          aria-invalid={Boolean(error)}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
+      <Input
+        id={inputId}
+        type={field.inputType ?? "text"}
+        autoComplete="off"
+        placeholder={field.placeholder}
+        value={value}
+        list={suggestionListId}
+        aria-invalid={Boolean(error)}
+        onChange={(event) => onChange(event.target.value)}
+      />
       {field.suggestions && (
         <datalist id={suggestionListId}>
           {field.suggestions.map((suggestion) => (

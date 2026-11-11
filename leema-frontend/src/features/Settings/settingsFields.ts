@@ -25,9 +25,7 @@ export type TextFieldConfig = {
   placeholder?: string;
   inputType?: "text" | "email";
   suggestions?: string[];
-  multiline?: boolean;
   required?: boolean;
-  minLength?: number;
 };
 
 export type FieldSection = {
@@ -157,31 +155,6 @@ export const AI_MODEL_SECTION: FieldSection = {
   ],
 };
 
-export const AI_INSTRUCTIONS_SECTION: FieldSection = {
-  title: "Instructions",
-  description:
-    "The exact instructions given to each model. Change these carefully: the findings list depends on the output format they describe.",
-  textFields: [
-    {
-      key: "validate_posts_objective",
-      label: "Screening instructions",
-      description: "Tells the screening model which conversations to keep.",
-      multiline: true,
-      required: true,
-      minLength: 20,
-    },
-    {
-      key: "scout_objective",
-      label: "Analysis instructions",
-      description:
-        "Tells the analysis model how to write each problem, including the HEADLINE and PROBLEM STATEMENT format.",
-      multiline: true,
-      required: true,
-      minLength: 20,
-    },
-  ],
-};
-
 export const REDDIT_LIMITS_SECTION: FieldSection = {
   title: "Reddit",
   description:
@@ -259,7 +232,7 @@ export const SECTIONS_BY_TAB: Record<SettingsTab, FieldSection[]> = {
   search: [SEARCH_VOLUME_SECTION],
   filters: [FILTER_SECTION],
   delivery: [DELIVERY_SECTION],
-  ai: [AI_MODEL_SECTION, AI_INSTRUCTIONS_SECTION],
+  ai: [AI_MODEL_SECTION],
   limits: [REDDIT_LIMITS_SECTION, GEMINI_LIMITS_SECTION],
 };
 
@@ -312,9 +285,6 @@ function validateNumber(field: NumberFieldConfig, storedValue: number) {
 function validateText(field: TextFieldConfig, value: string) {
   const trimmed = value.trim();
   if (field.required && !trimmed) return "This can't be empty.";
-  if (field.minLength && trimmed.length < field.minLength) {
-    return `Must be at least ${field.minLength} characters.`;
-  }
   if (field.inputType === "email" && trimmed && !EMAIL_PATTERN.test(trimmed)) {
     return "Enter a valid email address.";
   }
