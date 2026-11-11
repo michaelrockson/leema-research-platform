@@ -21,12 +21,6 @@ export const settingsService = {
     );
   },
 
-  async getDefaultSettings(): Promise<ResearchSettings> {
-    return requireData(
-      await apiRequest<SettingsApiResponse>("/api/v1/settings/defaults"),
-    );
-  },
-
   async saveSettings(settings: ResearchSettings): Promise<ResearchSettings> {
     return requireData(
       await apiRequest<SettingsApiResponse>("/api/v1/settings", {

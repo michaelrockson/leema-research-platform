@@ -35,15 +35,16 @@ export default function HeaderBar() {
 
           <NotificationBell />
 
-          <Button
+
+          <SettingsDrawer />
+
+           <Button
             className="h-10 rounded-lg px-4 font-semibold"
             disabled={isRunning}
             onClick={() => runFullResearchScan()}
           >
             {isRunning ? "Finding…" : "Find Problems"}
           </Button>
-
-          <SettingsDrawer />
         </div>
       </div>
     </header>

@@ -1,87 +1,85 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { settingsService } from "@/features/Settings/services/settingsService";
+import { settingsStorage } from "@/features/Settings/services/settingsStorage";
 import { validateSettings } from "@/features/Settings/settingsFields";
+import {
+  DEFAULT_SETTINGS,
+  toResearchSettings,
+} from "@/features/Settings/settingsDefaults";
 import { useNotifications } from "@/features/Notifications/hooks/useNotifications";
 import type { ResearchSettings, SettingKey } from "@/features/Settings/types";
 
-function errorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
 /**
- * Keeps an editable copy of the saved settings. Nothing is written to the
- * database until `save` is called.
+ * Keeps an editable copy of the settings. The form fills instantly from the
+ * copy stored in the browser (or built-in defaults) and quietly refreshes
+ * from the server when it is reachable. Nothing is written to the database
+ * until `save` is called.
  */
 export function useSettingsDraft() {
-  const [savedSettings, setSavedSettings] = useState<ResearchSettings | null>(
-    null,
+  const [savedSettings, setSavedSettings] = useState<ResearchSettings>(
+    settingsStorage.read,
   );
-  const [draft, setDraft] = useState<ResearchSettings | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ResearchSettings>(savedSettings);
   const [isSaving, setIsSaving] = useState(false);
-  const [isRestoringDefaults, setIsRestoringDefaults] = useState(false);
+  const hasEditedRef = useRef(false);
   const { notifyError, notifySuccess, notifyInfo } = useNotifications();
 
   const load = useCallback(async () => {
-    setIsLoading(true);
-    setLoadError(null);
+    const storedSettings = settingsStorage.read();
+    hasEditedRef.current = false;
+    setSavedSettings(storedSettings);
+    setDraft(storedSettings);
+
     try {
-      const settings = await settingsService.getSettings();
-      setSavedSettings(settings);
-      setDraft(settings);
-    } catch (error) {
-      setLoadError(errorMessage(error, "Couldn't load settings."));
-    } finally {
-      setIsLoading(false);
+      const serverSettings = toResearchSettings(
+        await settingsService.getSettings(),
+      );
+      settingsStorage.write(serverSettings);
+      setSavedSettings(serverSettings);
+      if (!hasEditedRef.current) setDraft(serverSettings);
+    } catch {
+      return;
     }
   }, []);
 
   const updateField = useCallback(
     <Key extends SettingKey>(key: Key, value: ResearchSettings[Key]) => {
-      setDraft((current) => (current ? { ...current, [key]: value } : current));
+      hasEditedRef.current = true;
+      setDraft((current) => ({ ...current, [key]: value }));
     },
     [],
   );
 
-  const errors = useMemo(() => (draft ? validateSettings(draft) : {}), [draft]);
+  const errors = useMemo(() => validateSettings(draft), [draft]);
   const hasErrors = Object.keys(errors).length > 0;
   const hasChanges = useMemo(
     () => JSON.stringify(draft) !== JSON.stringify(savedSettings),
     [draft, savedSettings],
   );
 
-  const discardChanges = useCallback(() => {
-    setDraft(savedSettings);
-  }, [savedSettings]);
-
-  const restoreDefaults = useCallback(async () => {
-    setIsRestoringDefaults(true);
-    try {
-      setDraft(await settingsService.getDefaultSettings());
-      notifyInfo("Defaults restored. Click Save to keep them.");
-    } catch (error) {
-      notifyError(errorMessage(error, "Could not reach the server."), {
-        title: "Couldn't load the defaults",
-      });
-    } finally {
-      setIsRestoringDefaults(false);
-    }
-  }, [notifyError, notifyInfo]);
+  const restoreDefaults = useCallback(() => {
+    hasEditedRef.current = true;
+    setDraft(DEFAULT_SETTINGS);
+    notifyInfo("Defaults restored. Click Save to keep them.");
+  }, [notifyInfo]);
 
   const save = useCallback(async () => {
-    if (!draft || hasErrors) return false;
+    if (hasErrors) return false;
     setIsSaving(true);
     try {
-      const saved = await settingsService.saveSettings(draft);
+      const saved = toResearchSettings(
+        await settingsService.saveSettings(draft),
+      );
+      settingsStorage.write(saved);
       setSavedSettings(saved);
       setDraft(saved);
       notifySuccess("Settings saved.");
       return true;
     } catch (error) {
-      notifyError(errorMessage(error, "Could not reach the server."), {
-        title: "Settings not saved",
-      });
+      notifyError(
+        error instanceof Error ? error.message : "Could not reach the server.",
+        { title: "Settings not saved" },
+      );
       return false;
     } finally {
       setIsSaving(false);
@@ -93,13 +91,9 @@ export function useSettingsDraft() {
     errors,
     hasErrors,
     hasChanges,
-    isLoading,
-    loadError,
     isSaving,
-    isRestoringDefaults,
     load,
     updateField,
-    discardChanges,
     restoreDefaults,
     save,
   };
