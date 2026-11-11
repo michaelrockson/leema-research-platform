@@ -24,6 +24,31 @@ class ExtractionRequest(BaseModel):
     queries: Optional[List[str]] = None
 
 
+def _serialize_post(post) -> dict:
+    return {
+        "id": post.id,
+        "submission_id": post.submission_id,
+        "subreddit": post.subreddit,
+        "title": post.title,
+        "score": post.score,
+        "number_of_comments": post.number_of_comments,
+        "post_url": post.post_url,
+    }
+
+
+def _load_recent_posts(limit: int = 20):
+    """
+    Returns the total number of stored posts and the most recent ``limit`` of
+    them, serialized for the API.
+    """
+    session = get_session()
+    try:
+        posts = PostRepository(session).get_all_posts()
+        return len(posts), [_serialize_post(post) for post in posts[-limit:]]
+    finally:
+        session.close()
+
+
 @router.get("/runextraction")
 def run_extraction(
     subreddits: Optional[str] = None, queries: Optional[str] = None
@@ -69,50 +94,39 @@ def run_extraction(
             subreddits = subreddit_list,
             search_queries = search_query_list,
         )
-        ingress = IngressPipeline()
+        final_result = run_pipeline(scout)
 
-        pipelines = [scout, ingress]
-        for pipeline in pipelines:
-            status = run_pipeline(pipeline)
-            if not status:
-                raise RuntimeError(
-                    f"Pipeline stage {pipeline.__class__.__name__} failed or found no qualifying data."
-                )
+        # Only fetch full discussions when the scout actually queued new posts.
+        if final_result.succeeded:
+            final_result = run_pipeline(IngressPipeline())
 
-        session = get_session()
-        try:
-            repo = PostRepository(session)
-            posts = repo.get_all_posts()
-            extracted_items = [
-                {
-                    "id": post.id,
-                    "submission_id": post.submission_id,
-                    "subreddit": post.subreddit,
-                    "title": post.title,
-                    "score": post.score,
-                    "number_of_comments": post.number_of_comments,
-                    "post_url": post.post_url,
-                }
-                for post in posts[-20:]
-            ]
-            total_count = len(posts)
-        finally:
-            session.close()
+        if final_result.has_failed:
+            raise HTTPException(status_code = 500,
+                                detail = final_result.message)
 
-        logger.info("Phase 1: Full extraction execution successful.")
+        total_count, extracted_items = _load_recent_posts()
+
+        logger.info(
+            f"Phase 1: Extraction finished ({final_result.status.value}).")
         return {
             "phase": "extraction",
             "success": True,
-            "message": "Extraction Process Completed Successfully",
+            "status": final_result.status.value,
+            "message": final_result.message,
             "data": {
                 "total_posts_extracted": total_count,
                 "recent_posts": extracted_items,
             },
         }
+    except HTTPException:
+        raise
     except Exception as error:
-        logger.error(f"Failed to run extraction process: {error}")
+        logger.error(f"Failed to run extraction process: {error}",
+                     exc_info = True)
         raise HTTPException(
-            status_code = 500, detail = f"Extraction phase failed: {error}"
+            status_code = 500,
+            detail = "Something went wrong while finding conversations. "
+                     "Please try again in a few minutes.",
         )
 
 
@@ -175,45 +189,35 @@ async def run_extraction_stream(subreddits: Optional[str] = None):
                 subreddits = subreddit_list,
                 search_queries = search_query_list,
             )
-            scout_ok = await asyncio.to_thread(scout.run)
-            if not scout_ok:
-                yield f"data: {json.dumps({'type': 'warning', 'stage': 'scout', 'message': 'No software-solvable opportunities found in scout phase.'})}\n\n"
+            final_result = await asyncio.to_thread(run_pipeline, scout)
+            if final_result.has_failed:
+                yield f"data: {json.dumps({'type': 'error', 'message': final_result.message})}\n\n"
+                return
 
-            yield f"data: {json.dumps({'type': 'status', 'stage': 'ingress', 'message': 'Fetching full discussions and comments...'})}\n\n"
-            await asyncio.sleep(0.05)
+            if final_result.has_no_new_data:
+                yield f"data: {json.dumps({'type': 'info', 'stage': 'scout', 'message': final_result.message})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'status', 'stage': 'ingress', 'message': 'Fetching full discussions and comments...'})}\n\n"
+                await asyncio.sleep(0.05)
 
-            ingress = IngressPipeline()
-            await asyncio.to_thread(ingress.run)
+                final_result = await asyncio.to_thread(run_pipeline,
+                                                       IngressPipeline())
+                if final_result.has_failed:
+                    yield f"data: {json.dumps({'type': 'error', 'message': final_result.message})}\n\n"
+                    return
 
-            session = get_session()
-            try:
-                repo = PostRepository(session)
-                posts = repo.get_all_posts()
-                recent_posts = [
-                    {
-                        "id": post.id,
-                        "submission_id": post.submission_id,
-                        "subreddit": post.subreddit,
-                        "title": post.title,
-                        "score": post.score,
-                        "number_of_comments": post.number_of_comments,
-                        "post_url": post.post_url,
-                    }
-                    for post in posts[-20:]
-                ]
-            finally:
-                session.close()
+            _, recent_posts = _load_recent_posts()
 
             # Stream each discovered post as an individual chunk
             for post in recent_posts:
                 yield f"data: {json.dumps({'type': 'post_chunk', 'data': post})}\n\n"
                 await asyncio.sleep(0.02)
 
-            yield f"data: {json.dumps({'type': 'complete', 'success': True, 'message': 'Extraction completed successfully.', 'total': len(recent_posts)})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'success': True, 'status': final_result.status.value, 'message': final_result.message, 'total': len(recent_posts)})}\n\n"
 
         except Exception as error:
             logger.error(f"Error in extraction stream: {error}", exc_info = True)
-            yield f"data: {json.dumps({'type': 'error', 'message': str(error)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Something went wrong while finding conversations. Please try again in a few minutes.'})}\n\n"
 
 
     return StreamingResponse(
@@ -241,18 +245,7 @@ def get_extracted_data():
             "success": True,
             "data": {
                 "total_posts_extracted": len(posts),
-                "posts": [
-                    {
-                        "id": post.id,
-                        "submission_id": post.submission_id,
-                        "subreddit": post.subreddit,
-                        "title": post.title,
-                        "score": post.score,
-                        "number_of_comments": post.number_of_comments,
-                        "post_url": post.post_url,
-                    }
-                    for post in posts
-                ],
+                "posts": [_serialize_post(post) for post in posts],
             },
         }
     finally:

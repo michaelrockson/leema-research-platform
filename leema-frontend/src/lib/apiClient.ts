@@ -1,5 +1,12 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
+/**
+ * Outcome of a pipeline run, as reported by the backend.
+ * "no_new_data" means the step ran fine but had nothing new to do; it is
+ * not an error and should be shown to the user as an informational notice.
+ */
+export type RunStatus = "success" | "no_new_data";
+
 export class ApiError extends Error {
   status: number;
   data?: unknown;

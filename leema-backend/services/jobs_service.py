@@ -35,8 +35,8 @@ class JobService:
         """
         logger.info("Starting scout bot job")
         scout = ScoutBotPipeline()
-        status = run_pipeline(scout)
-        if not status:
+        result = run_pipeline(scout)
+        if result.has_failed:
             logger.warning("Scout bot job interrupted.")
             return
         logger.info("Scout bot job finished")
@@ -59,13 +59,14 @@ class JobService:
         pipelines = [scout, ingress, sentiment, core, egress]
 
         for pipeline in pipelines:
-            status = False
             if isinstance(pipeline, EgressPipeline):
-                status = run_pipeline(pipeline, settings.CHOICE_THREE)
+                result = run_pipeline(pipeline, settings.CHOICE_THREE)
             else:
-                status = run_pipeline(pipeline)
+                result = run_pipeline(pipeline)
 
-            if not status:
+            if not result.succeeded:
+                if result.has_no_new_data:
+                    logger.info(f"Scheduled run stopped early: {result.message}")
                 return
 
         logger.info("Full pipeline execution successful.")

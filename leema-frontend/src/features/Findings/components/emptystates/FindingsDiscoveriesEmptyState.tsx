@@ -8,7 +8,7 @@ export default function FindingsDiscoveriesEmptyState() {
         <img
           src={emptyBoxImage}
           alt="No findings available"
-          className="w-32 h-32 object-contain"
+          className="w-32 h-32 object-contain grayscale opacity-50"
         />
       </CardContent>
       <CardDescription className="text-center text-sm text-muted-foreground">

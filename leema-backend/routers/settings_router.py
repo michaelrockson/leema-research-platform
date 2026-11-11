@@ -1,51 +1,61 @@
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from database import get_session
 from repositories.settings_repository import SettingsRepository
+from settings.setting_defaults import SETTING_DEFAULTS
 from utils.logger import logger
 
 router = APIRouter(tags = ["Settings"])
 
-
-class SettingsCreateRequest(BaseModel):
-    communities: Optional[List[str]] = None
-    signals: Optional[List[str]] = None
-    conversations_per_community: Optional[int] = None
-    conversationsPerCommunity: Optional[int] = None
-    replies_per_conversation: Optional[int] = None
-    repliesPerConversation: Optional[int] = None
+EMAIL_PATTERN = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
 
-class SettingsUpdateRequest(BaseModel):
-    communities: Optional[List[str]] = None
-    signals: Optional[List[str]] = None
-    conversations_per_community: Optional[int] = None
-    conversationsPerCommunity: Optional[int] = None
-    replies_per_conversation: Optional[int] = None
-    repliesPerConversation: Optional[int] = None
+class SettingsRequest(BaseModel):
+    communities: Optional[List[str]] = Field(default = None, min_length = 1)
+    signals: Optional[List[str]] = Field(default = None, min_length = 1)
+    conversations_per_community: Optional[int] = Field(
+        default = None, ge = 1, le = 250)
+    replies_per_conversation: Optional[int] = Field(
+        default = None, ge = 0, le = 500)
+    max_scout_results: Optional[int] = Field(default = None, ge = 1, le = 500)
+    min_comments: Optional[int] = Field(default = None, ge = 0)
+    min_score: Optional[int] = Field(default = None, ge = 0)
+    min_upvote_ratio: Optional[float] = Field(default = None, ge = 0, le = 1)
+    recipient_address: Optional[str] = Field(
+        default = None, max_length = 320, pattern = EMAIL_PATTERN)
+    notion_database_id: Optional[str] = Field(default = None, max_length = 64)
+    agent_model: Optional[str] = Field(
+        default = None, min_length = 1, max_length = 100)
+    scout_model: Optional[str] = Field(
+        default = None, min_length = 1, max_length = 100)
+    reddit_max_requests_per_min: Optional[int] = Field(
+        default = None, ge = 1, le = 60)
+    reddit_max_concurrency: Optional[int] = Field(
+        default = None, ge = 1, le = 20)
+    reddit_batch_size: Optional[int] = Field(default = None, ge = 1, le = 50)
+    reddit_batch_delay: Optional[float] = Field(
+        default = None, ge = 0, le = 30)
+    reddit_max_retries: Optional[int] = Field(default = None, ge = 1, le = 10)
+    gemini_max_requests_per_min: Optional[int] = Field(
+        default = None, ge = 1, le = 1000)
+    gemini_max_concurrency: Optional[int] = Field(
+        default = None, ge = 1, le = 10)
+    gemini_max_retries: Optional[int] = Field(default = None, ge = 1, le = 10)
 
 
-def _normalize_settings_payload(
-    payload: Union[SettingsCreateRequest, SettingsUpdateRequest]
-) -> Dict[str, Any]:
-    conv_limit = (
-        payload.conversations_per_community
-        if payload.conversations_per_community is not None
-        else payload.conversationsPerCommunity
-    )
-    rep_limit = (
-        payload.replies_per_conversation
-        if payload.replies_per_conversation is not None
-        else payload.repliesPerConversation
-    )
+@router.get("/settings/defaults")
+def get_default_settings():
+    """
+    The factory default for every editable setting, taken from settings.py.
+    Used by the settings panel to restore defaults before the user saves.
+    """
     return {
-        "communities": payload.communities,
-        "signals": payload.signals,
-        "conversations_per_community": conv_limit,
-        "replies_per_conversation": rep_limit,
+        "success": True,
+        "message": "Default settings retrieved successfully",
+        "data": dict(SETTING_DEFAULTS),
     }
 
 
@@ -106,7 +116,7 @@ def get_setting_by_id(setting_id: int):
 
 
 @router.post("/settings")
-def create_settings(payload: SettingsCreateRequest):
+def create_settings(payload: SettingsRequest):
     """
     CRUD - Create:
     Create a new settings configuration record.
@@ -114,7 +124,7 @@ def create_settings(payload: SettingsCreateRequest):
     session = get_session()
     try:
         repo = SettingsRepository(session)
-        normalized = _normalize_settings_payload(payload)
+        normalized = payload.model_dump(exclude_none = True)
         setting = repo.create_setting(**normalized)
         return {
             "success": True,
@@ -133,7 +143,7 @@ def create_settings(payload: SettingsCreateRequest):
 @router.put("/settings")
 @router.put("/settings/{setting_id}")
 def update_settings(
-    payload: SettingsUpdateRequest, setting_id: Optional[int] = None
+    payload: SettingsRequest, setting_id: Optional[int] = None
 ):
     """
     CRUD - Update:
@@ -142,7 +152,7 @@ def update_settings(
     session = get_session()
     try:
         repo = SettingsRepository(session)
-        normalized = _normalize_settings_payload(payload)
+        normalized = payload.model_dump(exclude_none = True)
         setting = repo.update_settings(setting_id = setting_id, **normalized)
         return {
             "success": True,
@@ -161,7 +171,7 @@ def update_settings(
 @router.patch("/settings")
 @router.patch("/settings/{setting_id}")
 def patch_settings(
-    payload: SettingsUpdateRequest, setting_id: Optional[int] = None
+    payload: SettingsRequest, setting_id: Optional[int] = None
 ):
     """
     CRUD - Partial Update:

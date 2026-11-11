@@ -9,7 +9,6 @@ from tenacity import (
     RetryCallState,
     retry,
     retry_if_exception,
-    stop_after_attempt,
     wait_exponential_jitter,
 )
 
@@ -82,6 +81,22 @@ class AsyncRateLimiter:
                 await asyncio.sleep(wait_time + random.uniform(0.05, 0.3))
 
 
+    def configure(self, max_rate: int, max_concurrency: int) -> None:
+        """
+        Apply new limits. Takes effect for the next event loop that uses the
+        limiter, so it should be called between pipeline runs.
+        """
+        if (max_rate, max_concurrency) == (self.max_rate,
+                                           self.max_concurrency):
+            return
+        with self._bucket_lock:
+            self.max_rate = max_rate
+            self._tokens = min(self._tokens, float(max_rate))
+        with self._primitives_lock:
+            self.max_concurrency = max_concurrency
+            self._loop_primitives = weakref.WeakKeyDictionary()
+
+
     async def __aenter__(self) -> "AsyncRateLimiter":
         semaphore, lock = self._primitives()
         await semaphore.acquire()
@@ -125,6 +140,25 @@ def _is_rate_limit_error(exception: Exception) -> bool:
     ))
 
 
+class ConfigurableAttemptLimit:
+    """
+    Tenacity stop condition whose attempt limit can change at runtime, so
+    retry decorators applied at import time still follow saved settings.
+    """
+
+
+    def __init__(self, max_attempts: int) -> None:
+        self.max_attempts = max_attempts
+
+
+    def __call__(self, retry_state: RetryCallState) -> bool:
+        return retry_state.attempt_number >= self.max_attempts
+
+
+reddit_attempt_limit = ConfigurableAttemptLimit(settings.REDDIT_MAX_RETRIES)
+gemini_attempt_limit = ConfigurableAttemptLimit(settings.GEMINI_MAX_RETRIES)
+
+
 def _log_before_retry(retry_state: RetryCallState) -> None:
     next_sleep = getattr(retry_state.next_action, "sleep", 0.0)
     logger.warning(
@@ -136,7 +170,7 @@ def _log_before_retry(retry_state: RetryCallState) -> None:
 reddit_retry = retry(
     retry = retry_if_exception(_is_rate_limit_error),
     wait = wait_exponential_jitter(initial = 2, max = 60, jitter = 5),
-    stop = stop_after_attempt(settings.REDDIT_MAX_RETRIES),
+    stop = reddit_attempt_limit,
     before_sleep = _log_before_retry,
     reraise = True,
 )
@@ -144,10 +178,26 @@ reddit_retry = retry(
 gemini_retry = retry(
     retry = retry_if_exception(_is_rate_limit_error),
     wait = wait_exponential_jitter(initial = 5, max = 120, jitter = 10),
-    stop = stop_after_attempt(settings.GEMINI_MAX_RETRIES),
+    stop = gemini_attempt_limit,
     before_sleep = _log_before_retry,
     reraise = True,
 )
+
+
+def apply_rate_limits(runtime_settings) -> None:
+    """
+    Point the shared limiters and retry policies at the saved settings.
+    """
+    reddit_limiter.configure(
+        max_rate = runtime_settings.reddit_max_requests_per_min,
+        max_concurrency = runtime_settings.reddit_max_concurrency,
+    )
+    gemini_limiter.configure(
+        max_rate = runtime_settings.gemini_max_requests_per_min,
+        max_concurrency = runtime_settings.gemini_max_concurrency,
+    )
+    reddit_attempt_limit.max_attempts = runtime_settings.reddit_max_retries
+    gemini_attempt_limit.max_attempts = runtime_settings.gemini_max_retries
 
 
 # =====================================================

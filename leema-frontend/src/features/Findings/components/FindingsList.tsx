@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useResearchContext } from "@/context/ResearchContext.tsx";
 import FindingsCard from "@/features/Findings/components/FindingsCard.tsx";
 import type { FindingDataProps } from "@/features/Findings/types.ts";
 import FindingsDiscoveriesEmptyState from "@/features/Findings/components/emptystates/FindingsDiscoveriesEmptyState.tsx";
@@ -10,14 +11,27 @@ type FindingsListProps = {
   findingData: FindingDataProps[] | undefined;
 };
 
+function isSubsetOf(
+  updatedFindings: FindingDataProps[] | undefined,
+  previousFindings: FindingDataProps[] | undefined,
+) {
+  if (!updatedFindings || !previousFindings) return false;
+  const previousTitles = new Set(
+    previousFindings.map((finding) => finding.title),
+  );
+  return updatedFindings.every((finding) => previousTitles.has(finding.title));
+}
+
 export function FindingsList({ findingData }: FindingsListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [previousFindingData, setPreviousFindingData] = useState(findingData);
+  const { deletingFindingId, deleteFinding } = useResearchContext();
 
-  // Go back to the first page whenever a new set of findings arrives.
   if (findingData !== previousFindingData) {
     setPreviousFindingData(findingData);
-    setCurrentPage(1);
+    if (!isSubsetOf(findingData, previousFindingData)) {
+      setCurrentPage(1);
+    }
   }
 
   if (!findingData || findingData.length === 0) {
@@ -29,13 +43,19 @@ export function FindingsList({ findingData }: FindingsListProps) {
   const pageStartIndex = (safeCurrentPage - 1) * FINDINGS_PER_PAGE;
   const visibleFindings = findingData.slice(
     pageStartIndex,
-    pageStartIndex + FINDINGS_PER_PAGE
+    pageStartIndex + FINDINGS_PER_PAGE,
   );
 
   return (
     <div className="flex flex-col gap-6">
       {visibleFindings.map((finding) => (
-        <FindingsCard key={finding.id} {...finding} />
+        <FindingsCard
+          key={finding.id}
+          {...finding}
+          isDeleting={deletingFindingId === finding.id}
+          isDeleteDisabled={deletingFindingId !== null}
+          onDelete={() => deleteFinding(finding.id)}
+        />
       ))}
       <FindingsPagination
         currentPage={safeCurrentPage}

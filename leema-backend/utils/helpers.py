@@ -6,8 +6,9 @@ from jinja2 import Environment
 from sqlalchemy.orm import Session
 
 from database.models import Comment, Post
+from services.runtime_settings_service import load_runtime_settings
 from utils.logger import logger
-from utils.rate_limiter import reddit_limiter, reddit_retry
+from utils.rate_limiter import apply_rate_limits, reddit_limiter, reddit_retry
 
 
 def combine_search_queries(queries: List[str], chunk_size: int = 8) -> List[
@@ -432,7 +433,7 @@ def send_by_channel(service: Any, choice: str, notion_only: str,
 
 def run_pipeline(pipeline, *args, **kwargs):
     """
-    Runs a pipeline step and returns its success status.
+    Runs a pipeline step, logs its outcome, and returns its result.
 
     Args:
         pipeline: The pipeline instance to run.
@@ -440,18 +441,24 @@ def run_pipeline(pipeline, *args, **kwargs):
         **kwargs: Keyword arguments for the pipeline's run method.
 
     Returns:
-        bool: True if the pipeline succeeded and found data, False otherwise.
+        PipelineResult: The pipeline's outcome (success, no new data, or failed)
+        along with a user-facing message.
     """
     pipeline_name = pipeline.__class__.__name__
 
+    apply_rate_limits(load_runtime_settings())
     logger.info(f"Running {pipeline_name}...")
 
-    if not pipeline.run(*args, **kwargs):
-        logger.error(f"{pipeline_name} failed or found no data.")
-        return False
+    result = pipeline.run(*args, **kwargs)
 
-    logger.info(f"{pipeline_name} execution successful.")
-    return True
+    if result.succeeded:
+        logger.info(f"{pipeline_name} execution successful.")
+    elif result.has_no_new_data:
+        logger.info(f"{pipeline_name} finished with nothing new: {result.message}")
+    else:
+        logger.error(f"{pipeline_name} failed: {result.message}")
+
+    return result
 
 
 @reddit_retry
@@ -462,6 +469,7 @@ async def search_one(
     min_upvote_ratio: float,
     min_score: int,
     min_comments: int,
+    search_limit: int = 120,
 ) -> List[Dict]:
     """
     Searches a single subreddit for one query and returns posts that meet the
@@ -480,6 +488,7 @@ async def search_one(
         min_upvote_ratio (float): Minimum upvote ratio a post must have to be included.
         min_score (int): Minimum score (upvotes) a post must have to be included.
         min_comments (int): Minimum comment count a post must have to be included.
+        search_limit (int): Maximum number of search results to review.
 
     Returns:
         List[Dict]: Posts that passed every engagement filter for this
@@ -497,7 +506,7 @@ async def search_one(
         async for search_result in subreddit.search(
             query,
             sort = "hot",
-            limit = 120,
+            limit = search_limit,
             time_filter = "month"
         ):
             evaluate_engagements(

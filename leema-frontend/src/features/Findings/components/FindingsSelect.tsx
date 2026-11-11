@@ -13,7 +13,7 @@ const saveOptions = [
   { label: "Email", value: "Email" },
   { label: "PDF", value: "PDF" },
   { label: "CSV", value: "CSV" },
-  { label: "All channels", value: "All Channels" },
+  { label: "Notion & Email", value: "All Channels" },
 ];
 
 type FindingsSelectProps = {

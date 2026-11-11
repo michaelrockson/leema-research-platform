@@ -11,7 +11,6 @@ export default function Findings() {
     selectedChannel,
     setSelectedChannel,
     isSaving,
-    saveMessage,
     saveDiscoveries,
   } = useResearchContext();
   const isFileExport =
@@ -31,11 +30,6 @@ export default function Findings() {
                 </span>
               )}
             </h4>
-            {saveMessage && (
-              <span className="text-sm text-green-600 font-medium pt-1">
-                {saveMessage}
-              </span>
-            )}
           </div>
           <div className="flex justify-between items-center gap-4">
             <FindingsSelect
@@ -52,8 +46,8 @@ export default function Findings() {
                   ? "Preparing file…"
                   : "Download findings"
                 : isSaving
-                  ? "Sending…"
-                  : "Send findings"}
+                  ? "Saving…"
+                  : "Save findings"}
             </Button>
           </div>
         </div>

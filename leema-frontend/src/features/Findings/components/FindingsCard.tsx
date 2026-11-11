@@ -3,12 +3,21 @@ import {
   ArrowBigUp,
   ArrowRight,
   ChevronDown,
+  Loader2,
   MessageSquare,
+  Trash2,
   TrendingDown,
   TrendingUp,
   Minus,
 } from "lucide-react";
+import { Button } from "@/components/ui/button.tsx";
 import { Card } from "@/components/ui/card.tsx";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover.tsx";
 import { cn } from "@/lib/utils";
 import type { FindingDataProps } from "@/features/Findings/types.ts";
 
@@ -49,6 +58,12 @@ function getOpportunityStyle(feasibility: string) {
   return opportunityStyles.high;
 }
 
+type FindingsCardProps = FindingDataProps & {
+  isDeleting: boolean;
+  isDeleteDisabled: boolean;
+  onDelete: () => void;
+};
+
 export default function FindingsCard({
   title,
   feasibility,
@@ -57,35 +72,69 @@ export default function FindingsCard({
   source_url,
   source_upvotes,
   source_comments,
-}: FindingDataProps) {
+  isDeleting,
+  isDeleteDisabled,
+  onDelete,
+}: FindingsCardProps) {
   const opportunity = getOpportunityStyle(feasibility);
   const hasSourceStats = source_upvotes != null || source_comments != null;
   const [isExpanded, setIsExpanded] = useState(false);
   const detailsId = useId();
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   return (
     <Card className="gap-0 px-7 py-7 shadow-xs">
-      <h4 className="text-xl font-bold leading-snug text-foreground">
-        {title}
-      </h4>
-      {hasSourceStats && (
-        <div className="mt-2 flex items-center gap-4 text-sm font-medium text-muted-foreground">
-          {source_upvotes != null && (
-            <span className="inline-flex items-center gap-1.5">
-              <ArrowBigUp className="size-4" />
-              {formatCount(source_upvotes)}{" "}
-              {source_upvotes === 1 ? "upvote" : "upvotes"}
-            </span>
-          )}
-          {source_comments != null && (
-            <span className="inline-flex items-center gap-1.5">
-              <MessageSquare className="size-4" />
-              {formatCount(source_comments)}{" "}
-              {source_comments === 1 ? "comment" : "comments"}
-            </span>
-          )}
-        </div>
-      )}
+      <div className="flex items-start justify-between gap-4">
+        <h4 className="text-xl font-bold leading-snug text-foreground">
+          {title}
+        </h4>
+        <Popover open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+          <PopoverTrigger
+            disabled={isDeleteDisabled}
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="-mt-1 -mr-2 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                aria-label={`Delete problem: ${title}`}
+                title="Delete problem"
+              />
+            }
+          >
+            {isDeleting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Trash2 className="size-4" />
+            )}
+          </PopoverTrigger>
+          <PopoverContent align="end" className="flex w-64 flex-col gap-3">
+            <PopoverTitle>Delete this problem?</PopoverTitle>
+            <p className="text-sm text-muted-foreground">
+              It will be removed from your findings and future reports. This
+              can't be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  setIsConfirmOpen(false);
+                  onDelete();
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
       <div id={detailsId}>
         <p
           className={cn(
@@ -141,6 +190,24 @@ export default function FindingsCard({
           <opportunity.Icon className="size-4" />
           {opportunity.label}
         </span>
+        {hasSourceStats && (
+          <div className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
+            {source_upvotes != null && (
+              <span className="inline-flex items-center gap-1.5">
+                <ArrowBigUp className="size-4" />
+                {formatCount(source_upvotes)}{" "}
+                {source_upvotes === 1 ? "upvote" : "upvotes"}
+              </span>
+            )}
+            {source_comments != null && (
+              <span className="inline-flex items-center gap-1.5">
+                <MessageSquare className="size-4" />
+                {formatCount(source_comments)}{" "}
+                {source_comments === 1 ? "comment" : "comments"}
+              </span>
+            )}
+          </div>
+        )}
         <button
           type="button"
           onClick={() => setIsExpanded((wasExpanded) => !wasExpanded)}

@@ -1,35 +1,48 @@
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
 from database import get_session
 from database.models import Setting
+from settings.setting_defaults import EDITABLE_SETTING_FIELDS, \
+    SETTING_DEFAULTS
 from utils.logger import logger
 
-# Default values mirroring frontend and backend defaults
-DEFAULT_COMMUNITIES: List[str] = [
-    "accounting",
-    "bookkeeping",
-    "smallbusiness",
-    "ecommerce",
-    "sales",
-]
 
-DEFAULT_SIGNALS: List[str] = [
-    "tired of",
-    "frustrated",
-    "annoying",
-    "hate",
-    "nightmare",
-    "painful",
-    "struggling with",
-    "fed up",
-    "manual process",
-]
+def _clean_communities(communities: List[str]) -> List[str]:
+    cleaned = []
+    for community in communities:
+        name = community.strip().removeprefix("r/").strip()
+        if name and name not in cleaned:
+            cleaned.append(name)
+    return cleaned
 
-DEFAULT_CONVERSATIONS_PER_COMMUNITY: int = 50
-DEFAULT_REPLIES_PER_CONVERSATION: int = 10
+
+def _clean_signals(signals: List[str]) -> List[str]:
+    cleaned = []
+    for signal in signals:
+        phrase = signal.strip()
+        if phrase and phrase not in cleaned:
+            cleaned.append(phrase)
+    return cleaned
+
+
+def _clean_changes(changes: Dict[str, Any]) -> Dict[str, Any]:
+    cleaned = {
+        field_name: value
+        for field_name, value in changes.items()
+        if field_name in EDITABLE_SETTING_FIELDS and value is not None
+    }
+    if "communities" in cleaned:
+        cleaned["communities"] = _clean_communities(cleaned["communities"])
+    if "signals" in cleaned:
+        cleaned["signals"] = _clean_signals(cleaned["signals"])
+    for text_field in ("recipient_address", "notion_database_id",
+                       "agent_model", "scout_model"):
+        if text_field in cleaned:
+            cleaned[text_field] = cleaned[text_field].strip()
+    return cleaned
 
 
 class SettingsRepository:
@@ -73,41 +86,12 @@ class SettingsRepository:
         return records
 
 
-    def create_setting(
-        self,
-        communities: Optional[List[str]] = None,
-        signals: Optional[List[str]] = None,
-        conversations_per_community: Optional[int] = None,
-        replies_per_conversation: Optional[int] = None,
-    ) -> Setting:
+    def create_setting(self, **changes: Any) -> Setting:
         """
-        Create a new setting record.
+        Create a new setting record. Fields that are not supplied fall back
+        to the defaults in settings.py.
         """
-        cleaned_communities = (
-            [community.strip().replace("r/", "") for community in communities if community.strip()]
-            if communities is not None
-            else DEFAULT_COMMUNITIES
-        )
-        cleaned_signals = (
-            [signal.strip() for signal in signals if signal.strip()]
-            if signals is not None
-            else DEFAULT_SIGNALS
-        )
-
-        setting = Setting(
-            communities = cleaned_communities,
-            signals = cleaned_signals,
-            conversations_per_community = (
-                conversations_per_community
-                if conversations_per_community is not None
-                else DEFAULT_CONVERSATIONS_PER_COMMUNITY
-            ),
-            replies_per_conversation = (
-                replies_per_conversation
-                if replies_per_conversation is not None
-                else DEFAULT_REPLIES_PER_CONVERSATION
-            ),
-        )
+        setting = Setting(**{**SETTING_DEFAULTS, **_clean_changes(changes)})
         self.session.add(setting)
         self.session.commit()
         self.session.refresh(setting)
@@ -115,14 +99,8 @@ class SettingsRepository:
         return setting
 
 
-    def update_settings(
-        self,
-        setting_id: Optional[int] = None,
-        communities: Optional[List[str]] = None,
-        signals: Optional[List[str]] = None,
-        conversations_per_community: Optional[int] = None,
-        replies_per_conversation: Optional[int] = None,
-    ) -> Setting:
+    def update_settings(self, setting_id: Optional[int] = None,
+                        **changes: Any) -> Setting:
         """
         Update an existing setting record, or the primary setting if ID is omitted.
         """
@@ -133,26 +111,10 @@ class SettingsRepository:
                 Setting.id.asc()).first()
 
         if not setting:
-            return self.create_setting(
-                communities = communities,
-                signals = signals,
-                conversations_per_community = conversations_per_community,
-                replies_per_conversation = replies_per_conversation,
-            )
+            return self.create_setting(**changes)
 
-        if communities is not None:
-            setting.communities = [
-                community.strip().replace("r/", "") for community in communities if community.strip()
-            ]
-
-        if signals is not None:
-            setting.signals = [signal.strip() for signal in signals if signal.strip()]
-
-        if conversations_per_community is not None:
-            setting.conversations_per_community = conversations_per_community
-
-        if replies_per_conversation is not None:
-            setting.replies_per_conversation = replies_per_conversation
+        for field_name, value in _clean_changes(changes).items():
+            setattr(setting, field_name, value)
 
         setting.updated_at = datetime.now(timezone.utc)
         self.session.commit()
@@ -186,22 +148,15 @@ class SettingsRepository:
             return existing
 
         if existing and force:
-            existing.communities = DEFAULT_COMMUNITIES
-            existing.signals = DEFAULT_SIGNALS
-            existing.conversations_per_community = DEFAULT_CONVERSATIONS_PER_COMMUNITY
-            existing.replies_per_conversation = DEFAULT_REPLIES_PER_CONVERSATION
+            for field_name, default_value in SETTING_DEFAULTS.items():
+                setattr(existing, field_name, default_value)
             existing.updated_at = datetime.now(timezone.utc)
             self.session.commit()
             self.session.refresh(existing)
             logger.info("Force-reseeded default settings in database.")
             return existing
 
-        new_setting = Setting(
-            communities = DEFAULT_COMMUNITIES,
-            signals = DEFAULT_SIGNALS,
-            conversations_per_community = DEFAULT_CONVERSATIONS_PER_COMMUNITY,
-            replies_per_conversation = DEFAULT_REPLIES_PER_CONVERSATION,
-        )
+        new_setting = Setting(**SETTING_DEFAULTS)
         self.session.add(new_setting)
         self.session.commit()
         self.session.refresh(new_setting)
