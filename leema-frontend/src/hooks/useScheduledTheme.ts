@@ -4,8 +4,6 @@ type ThemeName = "light" | "dark";
 
 type ThemeOverride = {
   theme: ThemeName;
-  // The override lapses at the next scheduled switch, so the time-of-day
-  // schedule takes over again on its own.
   expiresAt: number;
 };
 

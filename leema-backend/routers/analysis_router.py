@@ -151,16 +151,15 @@ def run_data_analysis():
     try:
         logger.info(
             "Phase 2: Starting Sentiment and Core curation pipelines...")
-        sentiment = SentimentPipeline()
-        core = CorePipeline()
+        final_result = run_pipeline(SentimentPipeline())
 
-        pipelines = [sentiment, core]
-        for pipeline in pipelines:
-            status = run_pipeline(pipeline)
-            if not status:
-                raise RuntimeError(
-                    f"Pipeline stage {pipeline.__class__.__name__} failed."
-                )
+        # Only ask the curator for a new brief when there is something to curate.
+        if final_result.succeeded:
+            final_result = run_pipeline(CorePipeline())
+
+        if final_result.has_failed:
+            raise HTTPException(status_code = 500,
+                                detail = final_result.message)
 
         session = get_session()
         try:
@@ -170,20 +169,27 @@ def run_data_analysis():
         finally:
             session.close()
 
-        logger.info("Phase 2: Full data analysis execution successful.")
+        logger.info(
+            f"Phase 2: Data analysis finished ({final_result.status.value}).")
         return {
             "phase": "analysis",
             "success": True,
-            "message": "The Data Analysis Process Completed Successfully!",
+            "status": final_result.status.value,
+            "message": final_result.message,
             "data": {
                 "findings_count": len(findings),
                 "findings": findings,
             },
         }
+    except HTTPException:
+        raise
     except Exception as error:
-        logger.error(f"Failed to run processing layer: {error}")
+        logger.error(f"Failed to run processing layer: {error}",
+                     exc_info = True)
         raise HTTPException(
-            status_code = 500, detail = f"Data analysis phase failed: {error}"
+            status_code = 500,
+            detail = "Something went wrong while identifying problems. "
+                     "Please try again in a few minutes.",
         )
 
 

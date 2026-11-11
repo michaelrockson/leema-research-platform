@@ -24,11 +24,24 @@ def run_all_pipelines():
         analysis_result = run_data_analysis()
         egress_result = send_report_by_all_channels()
 
-        logger.info("Full 3-phase execution completed successfully.")
+        phase_results = [extraction_result, analysis_result, egress_result]
+        all_succeeded = all(
+            phase_result.get("status") == "success"
+            for phase_result in phase_results
+        )
+        if all_succeeded:
+            message = "All 3 steps completed successfully."
+        else:
+            message = " ".join(
+                phase_result["message"] for phase_result in phase_results
+            )
+
+        logger.info("Full 3-phase execution completed.")
         return {
             "phase": "all",
             "success": True,
-            "message": "Pipeline execution completed successfully across all 3 phases.",
+            "status": "success" if all_succeeded else "no_new_data",
+            "message": message,
             "data": {
                 "extraction": extraction_result.get("data", {}),
                 "analysis": analysis_result.get("data", {}),
@@ -38,8 +51,9 @@ def run_all_pipelines():
     except HTTPException:
         raise
     except Exception as error:
-        logger.error(f"Failed to run Leema Agent: {error}")
+        logger.error(f"Failed to run Leema Agent: {error}", exc_info = True)
         raise HTTPException(
             status_code = 500,
-            detail = f"Full pipeline execution failed: {error}"
+            detail = "Something went wrong while running the full research "
+                     "scan. Please try again in a few minutes.",
         )

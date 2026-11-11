@@ -2,6 +2,7 @@ import { Moon, Settings, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import DrawerStore from "@/components/DrawerStore.tsx";
 import SettingsForm from "@/features/Settings/components/SettingsForm.tsx";
+import NotificationBell from "@/features/Notifications/components/NotificationBell.tsx";
 import { useResearchContext } from "@/context/ResearchContext.tsx";
 import useScheduledTheme from "@/hooks/useScheduledTheme";
 
@@ -23,6 +24,15 @@ export default function HeaderBar() {
         </a>
 
         <div className="flex items-center gap-2">
+
+          <Button
+            className="h-10 rounded-lg px-4 font-semibold"
+            disabled={isRunning}
+            onClick={() => runFullResearchScan()}
+          >
+            {isRunning ? "Finding…" : "Find Problems"}
+          </Button>
+
           <Button
             variant="ghost"
             className="size-10 rounded-lg"
@@ -33,13 +43,7 @@ export default function HeaderBar() {
             {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </Button>
 
-          <Button
-            className="h-10 rounded-lg px-4 font-semibold"
-            disabled={isRunning}
-            onClick={() => runFullResearchScan()}
-          >
-            {isRunning ? "Running…" : "Run all steps"}
-          </Button>
+          <NotificationBell />
 
           <DrawerStore
             drawerProps={{

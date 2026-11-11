@@ -1,3 +1,4 @@
+from pipelines.pipeline_result import PipelineResult
 from services.reddit_service import RedditService
 from utils.logger import logger
 
@@ -12,11 +13,12 @@ class IngressPipeline:
         self.reddit_service = RedditService()
 
 
-    def run(self):
+    def run(self) -> PipelineResult:
         """
         Executes the ingress pipeline: data scraping and storage.
         Returns:
-            bool: True if the pipeline succeeded and found data, False otherwise.
+            PipelineResult: SUCCESS when new posts were stored, NO_NEW_DATA when
+            there was nothing new to fetch, FAILED on error.
         """
         try:
 
@@ -24,15 +26,19 @@ class IngressPipeline:
             reddit_data = self.reddit_service.run_reddit_scraper()
 
             if not reddit_data or not reddit_data.get("posts"):
-                logger.warning(
-                    "No new data fetched from Reddit. Stopping pipeline.")
-                return False
+                logger.info("No new data fetched from Reddit.")
+                return PipelineResult.no_new_data(
+                    "No new conversations to collect. Everything found has "
+                    "already been saved.")
 
             self.reddit_service.run_reddit_storage(reddit_data)
 
-            return True
+            return PipelineResult.success(
+                "New conversations collected successfully.")
 
         except Exception as error:
             logger.error(f"Error executing Ingress pipeline: {error}",
                          exc_info = True)
-            return False
+            return PipelineResult.failed(
+                "Something went wrong while collecting conversations from "
+                "Reddit. Please try again in a few minutes.")

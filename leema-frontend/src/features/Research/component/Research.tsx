@@ -3,7 +3,6 @@ import { ArrowRight, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
 import { Card } from "@/components/ui/card.tsx";
 import { Running } from "@/components/Running.tsx";
-import { cn } from "@/lib/utils";
 import { useResearchContext, type Stages } from "@/context/ResearchContext.tsx";
 
 function StageStatus({ stage }: { stage: Stages }) {
@@ -72,12 +71,8 @@ function StageCard({
 
       <div className="mt-auto pt-10">
         <Button
-          variant={hasRunBefore ? "outline" : "default"}
-          className={cn(
-            "h-10 rounded-full px-4 font-semibold",
-            !hasRunBefore &&
-              "bg-foreground text-background hover:bg-foreground/85",
-          )}
+          variant="outline"
+          className="h-10 rounded-md px-4 font-medium"
           disabled={isAnyStageRunning}
           onClick={onRun}
         >
@@ -94,14 +89,10 @@ function StageCard({
 }
 
 export default function Research() {
-  const { stages, isRunning, runStage, runError } = useResearchContext();
+  const { stages, isRunning, runStage } = useResearchContext();
 
   return (
     <div className="flex flex-col gap-4 pt-24">
-      {runError && (
-        <span className="text-sm font-medium text-red-500">{runError}</span>
-      )}
-
       <div className="flex flex-col items-stretch gap-4 md:flex-row md:gap-2">
         {stages.map((stage, stageIndex) => (
           <Fragment key={stage.id}>

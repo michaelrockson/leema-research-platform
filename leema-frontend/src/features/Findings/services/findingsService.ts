@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/apiClient";
+import { apiRequest, type RunStatus } from "@/lib/apiClient";
 import type { FindingDataProps } from "@/features/Findings/types";
 
 export type FindingsApiResponse = {
@@ -13,6 +13,7 @@ export type FindingsApiResponse = {
 export type EgressApiResponse = {
   phase: "egress";
   success: boolean;
+  status: RunStatus;
   message: string;
   data: {
     channel: string;

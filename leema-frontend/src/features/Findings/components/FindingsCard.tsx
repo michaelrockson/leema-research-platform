@@ -68,24 +68,6 @@ export default function FindingsCard({
       <h4 className="text-xl font-bold leading-snug text-foreground">
         {title}
       </h4>
-      {hasSourceStats && (
-        <div className="mt-2 flex items-center gap-4 text-sm font-medium text-muted-foreground">
-          {source_upvotes != null && (
-            <span className="inline-flex items-center gap-1.5">
-              <ArrowBigUp className="size-4" />
-              {formatCount(source_upvotes)}{" "}
-              {source_upvotes === 1 ? "upvote" : "upvotes"}
-            </span>
-          )}
-          {source_comments != null && (
-            <span className="inline-flex items-center gap-1.5">
-              <MessageSquare className="size-4" />
-              {formatCount(source_comments)}{" "}
-              {source_comments === 1 ? "comment" : "comments"}
-            </span>
-          )}
-        </div>
-      )}
       <div id={detailsId}>
         <p
           className={cn(
@@ -141,6 +123,24 @@ export default function FindingsCard({
           <opportunity.Icon className="size-4" />
           {opportunity.label}
         </span>
+        {hasSourceStats && (
+          <div className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
+            {source_upvotes != null && (
+              <span className="inline-flex items-center gap-1.5">
+                <ArrowBigUp className="size-4" />
+                {formatCount(source_upvotes)}{" "}
+                {source_upvotes === 1 ? "upvote" : "upvotes"}
+              </span>
+            )}
+            {source_comments != null && (
+              <span className="inline-flex items-center gap-1.5">
+                <MessageSquare className="size-4" />
+                {formatCount(source_comments)}{" "}
+                {source_comments === 1 ? "comment" : "comments"}
+              </span>
+            )}
+          </div>
+        )}
         <button
           type="button"
           onClick={() => setIsExpanded((wasExpanded) => !wasExpanded)}

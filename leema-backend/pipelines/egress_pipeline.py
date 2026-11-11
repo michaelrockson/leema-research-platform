@@ -1,3 +1,4 @@
+from pipelines.pipeline_result import PipelineResult
 from services.egress_service import EgressService
 from settings import settings
 from utils.helpers import send_by_channel
@@ -17,11 +18,12 @@ class EgressPipeline:
         self.all_channels = settings.CHOICE_THREE
 
 
-    def run(self, choice):
+    def run(self, choice) -> PipelineResult:
         """
         Executes the egress pipeline: query brief and deliver via chosen channels.
         Returns:
-            bool: True if the pipeline succeeded, False otherwise.
+            PipelineResult: SUCCESS when delivered, NO_NEW_DATA when there is
+            no report to send yet, FAILED when delivery failed.
         """
         try:
             logger.info("Egress pipeline started")
@@ -29,9 +31,10 @@ class EgressPipeline:
             brief = self.service.query_brief()
 
             if not brief:
-                logger.error(
-                    "No brief available for egress. Stopping pipeline.")
-                return False
+                logger.info("No brief available for egress.")
+                return PipelineResult.no_new_data(
+                    "There's no report to send yet. Run \"Identify problems\" "
+                    "first to generate one.")
 
             delivered = send_by_channel(
                 service = self.service,
@@ -42,9 +45,14 @@ class EgressPipeline:
             )
             if not delivered:
                 logger.error(f"Egress delivery via '{choice}' failed.")
-            return delivered
+                return PipelineResult.failed(
+                    "We couldn't deliver your report.")
+
+            return PipelineResult.success("Report delivered successfully.")
 
         except Exception as error:
             logger.error(f"Error executing Egress pipeline: {error}",
                          exc_info = True)
-            return False
+            return PipelineResult.failed(
+                "Something went wrong while sending your report. Please try "
+                "again in a few minutes.")

@@ -13,29 +13,41 @@ def _execute_egress(choice: str, channel_name: str):
         logger.info(
             f"Phase 3: Starting Egress pipeline for channel: {channel_name}..."
         )
-        egress = EgressPipeline()
-        status = run_pipeline(egress, choice)
-        if not status:
-            raise RuntimeError(
-                f"Egress delivery failed for channel '{channel_name}'. Check that a processed brief exists "
-                f"and that the channel's credentials are configured; see server logs for details."
+        result = run_pipeline(EgressPipeline(), choice)
+
+        if result.has_failed:
+            raise HTTPException(
+                status_code = 500,
+                detail = f"Couldn't send via {channel_name}. {result.message}",
             )
 
-        logger.info(f"Phase 3: Sent report via {channel_name}.")
+        if result.succeeded:
+            logger.info(f"Phase 3: Sent report via {channel_name}.")
+            message = f"Report sent via {channel_name}."
+            delivery_status = "DELIVERED"
+        else:
+            message = result.message
+            delivery_status = "NOTHING_TO_SEND"
+
         return {
             "phase": "egress",
             "success": True,
-            "message": f"Reports Sent Via {channel_name}.",
+            "status": result.status.value,
+            "message": message,
             "data": {
                 "channel": channel_name,
-                "status": "DELIVERED",
+                "status": delivery_status,
             },
         }
+    except HTTPException:
+        raise
     except Exception as error:
-        logger.error(f"Failed to send reports by {channel_name}: {error}")
+        logger.error(f"Failed to send reports by {channel_name}: {error}",
+                     exc_info = True)
         raise HTTPException(
             status_code = 500,
-            detail = f"Egress phase failed for {channel_name}: {error}",
+            detail = f"Something went wrong while sending via {channel_name}. "
+                     f"Please try again in a few minutes.",
         )
 
 

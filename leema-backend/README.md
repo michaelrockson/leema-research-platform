@@ -197,7 +197,8 @@ Both endpoints return the same shape:
 {
   "phase": "extraction",
   "success": true,
-  "message": "Extraction Process Completed Successfully",
+  "status": "success",
+  "message": "New conversations collected successfully.",
   "data": {
     "total_posts_extracted": 1,
     "recent_posts": [
@@ -220,7 +221,7 @@ Both endpoints return the same shape:
 same post fields as above. The extraction stream endpoint accepts an optional
 comma-separated `subreddits` query parameter and returns
 `text/event-stream`; each event is a JSON object prefixed by `data: `. Event
-types include `status`, `warning`, `post_chunk`, `complete`, and `error`.
+types include `status`, `info`, `post_chunk`, `complete`, and `error`.
 
 ### Analysis, delivery, and orchestration responses
 
@@ -254,7 +255,8 @@ body. A successful delivery response looks like:
 {
   "phase": "egress",
   "success": true,
-  "message": "Reports Sent Via Email.",
+  "status": "success",
+  "message": "Report sent via Email.",
   "data": {
     "channel": "Email",
     "status": "DELIVERED"
@@ -265,6 +267,19 @@ body. A successful delivery response looks like:
 The `channel` and `message` values vary by endpoint. `GET /runallprocesses`
 also takes no request body and returns each phase's `data` under
 `data.extraction`, `data.analysis`, and `data.egress`.
+
+#### Run status
+
+`/runextraction`, `/processdata`, the `/send*` endpoints, and
+`/runallprocesses` include a `status` field:
+
+| `status` | HTTP | Meaning |
+|---|---|---|
+| `success` | 200 | The step ran and produced new results. |
+| `no_new_data` | 200 | The step ran fine but had nothing new to do (for example, every matching post was already collected, or there is no report to send yet). `message` explains what happened and what to do next. Egress responses use `data.status: "NOTHING_TO_SEND"` in this case. |
+
+Real failures return HTTP 500 with a user-friendly `detail` message. The full
+error is written to the server logs.
 
 ### Settings requests and responses
 

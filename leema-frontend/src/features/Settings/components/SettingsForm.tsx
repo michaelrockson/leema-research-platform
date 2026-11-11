@@ -9,8 +9,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Loader2, Check, RefreshCw } from "lucide-react";
-import useSettings from "@/features/Settings/hooks/useSettingsForm.tsx";
+import { X, Loader2, RefreshCw } from "lucide-react";
+import useSettings from "@/features/Settings/hooks/useSettingsForm.ts";
 
 const settingsContent = {
   header: {
@@ -38,8 +38,6 @@ export default function SettingsForm() {
   const {
     isLoading,
     isSaving,
-    saveSuccess,
-    saveError,
     error,
     communities,
     signals,
@@ -99,16 +97,6 @@ export default function SettingsForm() {
           {isSaving && (
             <span className="flex items-center text-muted-foreground gap-1">
               <Loader2 className="size-3 animate-spin" /> Saving...
-            </span>
-          )}
-          {saveSuccess && (
-            <span className="flex items-center text-emerald-500 gap-1 font-medium">
-              <Check className="size-3" /> Saved
-            </span>
-          )}
-          {saveError && !isSaving && (
-            <span role="alert" className="text-destructive font-medium">
-              {saveError}
             </span>
           )}
         </div>

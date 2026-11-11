@@ -14,7 +14,6 @@ export function FindingsList({ findingData }: FindingsListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [previousFindingData, setPreviousFindingData] = useState(findingData);
 
-  // Go back to the first page whenever a new set of findings arrives.
   if (findingData !== previousFindingData) {
     setPreviousFindingData(findingData);
     setCurrentPage(1);
