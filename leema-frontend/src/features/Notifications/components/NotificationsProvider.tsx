@@ -25,10 +25,6 @@ import type {
   NotificationVariant,
 } from "@/features/Notifications/types";
 
-/**
- * Holds the list of pop-up notifications and renders them in a fixed
- * viewport. Each notification fades out by itself once its duration ends.
- */
 export function NotificationsProvider({
   children,
 }: {
@@ -70,7 +66,6 @@ export function NotificationsProvider({
     [clearTimer, commit],
   );
 
-  /** Start the fade-out, then remove the notification once it has faded. */
   const dismiss = useCallback(
     (notificationId: number) => {
       commit(

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, RefreshCw, RotateCcw, Settings, X } from "lucide-react";
+import { Loader2, RotateCcw, Settings, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -27,9 +27,8 @@ export default function SettingsDrawer() {
     if (await settings.save()) setIsOpen(false);
   };
 
-  const isBusy = settings.isSaving || settings.isRestoringDefaults;
   const canSave =
-    settings.hasChanges && !settings.hasErrors && !isBusy && !!settings.draft;
+    settings.hasChanges && !settings.hasErrors && !settings.isSaving;
 
   return (
     <Drawer
@@ -70,39 +69,18 @@ export default function SettingsDrawer() {
         </DrawerHeader>
 
         <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4">
-          {settings.isLoading && (
-            <div className="flex flex-col items-center justify-center gap-4 p-12">
-              <Loader2 className="size-8 animate-spin text-primary" />
-              <p className="text-sm font-medium text-muted-foreground">
-                Loading settings…
-              </p>
-            </div>
-          )}
-
-          {!settings.isLoading && settings.loadError && (
-            <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-              <p className="text-sm text-destructive">{settings.loadError}</p>
-              <Button variant="outline" size="sm" onClick={settings.load}>
-                <RefreshCw className="mr-2 size-4" />
-                Try again
-              </Button>
-            </div>
-          )}
-
-          {!settings.isLoading && !settings.loadError && settings.draft && (
-            <SettingsForm
-              settings={settings.draft}
-              errors={settings.errors}
-              onFieldChange={settings.updateField}
-            />
-          )}
+          <SettingsForm
+            settings={settings.draft}
+            errors={settings.errors}
+            onFieldChange={settings.updateField}
+          />
         </div>
 
         <DrawerFooter className="border-t">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button
               variant="ghost"
-              disabled={isBusy || !settings.draft}
+              disabled={settings.isSaving}
               onClick={settings.restoreDefaults}
             >
               <RotateCcw className="size-4" />
