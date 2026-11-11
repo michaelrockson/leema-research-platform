@@ -36,8 +36,6 @@ export function NotificationsProvider({
 }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [history, setHistory] = useState<NotificationRecord[]>([]);
-  // Mirror of `notifications` so callbacks can read the latest list without
-  // doing side effects (timers) inside a state updater.
   const notificationsRef = useRef<Notification[]>([]);
   const nextIdRef = useRef(1);
   const timersRef = useRef(new Map<number, ReturnType<typeof setTimeout>>());
@@ -100,8 +98,6 @@ export function NotificationsProvider({
       const durationMs = options.durationMs ?? DEFAULT_DURATION_MS[variant];
       const current = notificationsRef.current;
 
-      // Same message already on screen: restart its timer instead of stacking
-      // duplicates (e.g. repeated autosave failures).
       const duplicate = current.find(
         (notification) =>
           notification.variant === variant &&
@@ -110,7 +106,6 @@ export function NotificationsProvider({
       );
       if (duplicate) {
         setTimer(duplicate.id, () => dismiss(duplicate.id), durationMs);
-        // Move the matching history entry back to the top as unread.
         setHistory((currentHistory) => {
           const existing = currentHistory.find(
             (record) => record.id === duplicate.id,

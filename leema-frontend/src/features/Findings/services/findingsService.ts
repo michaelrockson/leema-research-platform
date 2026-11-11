@@ -10,6 +10,15 @@ export type FindingsApiResponse = {
   };
 };
 
+export type DeleteFindingApiResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    findings_count: number;
+    findings: FindingDataProps[];
+  };
+};
+
 export type EgressApiResponse = {
   phase: "egress";
   success: boolean;
@@ -27,6 +36,14 @@ export const findingsService = {
    */
   async getFindings(): Promise<FindingDataProps[]> {
     const response = await apiRequest<FindingsApiResponse>("/api/v1/findings");
+    return response.data?.findings || [];
+  },
+
+  async deleteFinding(findingId: string): Promise<FindingDataProps[]> {
+    const response = await apiRequest<DeleteFindingApiResponse>(
+      `/api/v1/findings/${encodeURIComponent(findingId)}`,
+      { method: "DELETE" },
+    );
     return response.data?.findings || [];
   },
 

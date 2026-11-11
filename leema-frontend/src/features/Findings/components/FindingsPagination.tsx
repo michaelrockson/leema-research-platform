@@ -16,7 +16,7 @@ export default function FindingsPagination({
 
   const pageNumbers = Array.from(
     { length: totalPages },
-    (_, pageIndex) => pageIndex + 1
+    (_, pageIndex) => pageIndex + 1,
   );
 
   return (

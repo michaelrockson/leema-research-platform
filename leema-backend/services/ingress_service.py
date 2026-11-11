@@ -4,7 +4,7 @@ from clients.reddit_client import get_reddit_client
 from database import get_session
 from repositories.validated_post_repository import \
     ValidatedPostRepository
-from settings import settings
+from services.runtime_settings_service import load_runtime_settings
 from utils.helpers import get_comments_from_submission, \
     get_post_by_id
 from utils.logger import logger
@@ -24,7 +24,8 @@ class IngressService:
     def __init__(self):
         self.reddit = None
         self.session = get_session()
-        self.comment_limit = settings.DEFAULT_COMMENT_LIMIT
+        self.runtime_settings = load_runtime_settings()
+        self.comment_limit = self.runtime_settings.replies_per_conversation
         self.posts = []
         self.submission_ids = []
         self.comments = []
@@ -73,7 +74,7 @@ class IngressService:
 
             logger.info(
                 f"fetch_validated_posts: fetching {len(coroutines)} post(s) in "
-                f"batches of {settings.REDDIT_BATCH_SIZE}."
+                f"batches of {self.runtime_settings.reddit_batch_size}."
             )
 
             # batched_gather keeps concurrent Reddit requests within the
@@ -81,8 +82,8 @@ class IngressService:
             # guarded by reddit_limiter + reddit_retry.
             raw_results = await batched_gather(
                 coroutines,
-                batch_size = settings.REDDIT_BATCH_SIZE,
-                batch_delay = settings.REDDIT_BATCH_DELAY,
+                batch_size = self.runtime_settings.reddit_batch_size,
+                batch_delay = self.runtime_settings.reddit_batch_delay,
             )
 
             posts = []
@@ -164,7 +165,7 @@ class IngressService:
 
         logger.info(
             f"fetch_reddit_comments: fetching comments for {len(coroutines)} submission(s) "
-            f"in batches of {settings.REDDIT_BATCH_SIZE}."
+            f"in batches of {self.runtime_settings.reddit_batch_size}."
         )
 
         # batched_gather keeps concurrent Reddit requests within the
@@ -172,8 +173,8 @@ class IngressService:
         # individually guarded by reddit_limiter + reddit_retry.
         raw_results = await batched_gather(
             coroutines,
-            batch_size = settings.REDDIT_BATCH_SIZE,
-            batch_delay = settings.REDDIT_BATCH_DELAY,
+            batch_size = self.runtime_settings.reddit_batch_size,
+            batch_delay = self.runtime_settings.reddit_batch_delay,
         )
 
         comments_collected = []

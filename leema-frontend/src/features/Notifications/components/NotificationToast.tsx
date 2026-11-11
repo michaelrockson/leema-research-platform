@@ -28,7 +28,6 @@ export default function NotificationToast({
 
   return (
     <Alert
-      // Errors and warnings interrupt screen readers; others wait their turn.
       role={isUrgent ? "alert" : "status"}
       aria-live={isUrgent ? "assertive" : "polite"}
       className={cn(

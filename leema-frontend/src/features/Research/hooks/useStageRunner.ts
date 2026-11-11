@@ -4,7 +4,6 @@ import { useNotifications } from "@/features/Notifications/hooks/useNotification
 import type { ExtractedPost } from "@/features/Research/services/researchService";
 import { findingsService } from "@/features/Findings/services/findingsService";
 import { findingsDeliveryService } from "@/features/Findings/services/findingsDeliveryService";
-import { settingsService } from "@/features/Settings/services/settingsService";
 import type { FindingDataProps } from "@/features/Findings/types";
 import type { RunStatus } from "@/lib/apiClient";
 import {
@@ -74,10 +73,7 @@ export function useStageRunner({
 
   // Step 1: Extraction & Ingestion
   const findConversations = async () => {
-    const userSettings = await settingsService.getSettingsOrCached();
-    const response = await researchService.runExtraction(
-      userSettings.communities,
-    );
+    const response = await researchService.runExtraction();
     if (response.data?.recent_posts) {
       setExtractedPosts(response.data.recent_posts);
     }

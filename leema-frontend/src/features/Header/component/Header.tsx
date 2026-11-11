@@ -3,8 +3,8 @@ export default function Header() {
     <div className="flex flex-col">
       <h2 className="font-bold">Find customer problems worth solving</h2>
       <span className="py-2 text-muted-foreground">
-        Explore conversations in your chosen Reddit communities to find recurring
-        customer pain points and product opportunities.
+        Explore conversations in your chosen Reddit communities to find
+        recurring customer pain points and product opportunities.
       </span>
     </div>
   );

@@ -10,6 +10,7 @@ from clients.reddit_client import get_reddit_client, \
     close_reddit_client
 from database import get_session
 from database.models import ValidatedPost
+from services.runtime_settings_service import load_runtime_settings
 from settings import settings
 from utils.helpers import search_one, combine_search_queries
 from utils.logger import logger
@@ -29,14 +30,15 @@ class ScoutBotService:
 
     def __init__(self, subreddits: List[str] = None,
                  search_queries: List[str] = None):
-        self.subreddits = subreddits or settings.DEFAULT_SUBREDDITS
-        raw_queries = search_queries or settings.SEARCH_QUERIES
-        # Combine search queries into boolean OR groups to reduce API round-trips by up to 90%
+        self.runtime_settings = load_runtime_settings()
+        self.subreddits = subreddits or self.runtime_settings.communities
+        raw_queries = search_queries or self.runtime_settings.signals
         self.search_queries = combine_search_queries(raw_queries,
                                                      chunk_size = 8)
-        self.min_score = settings.MIN_SCORE
-        self.min_comments = settings.MIN_COMMENTS
-        self.min_upvote_ratio = settings.MIN_UPVOTE_RATIO
+        self.min_score = self.runtime_settings.min_score
+        self.min_comments = self.runtime_settings.min_comments
+        self.min_upvote_ratio = self.runtime_settings.min_upvote_ratio
+        self.search_limit = self.runtime_settings.conversations_per_community
         self.reddit = None
         self.session = get_session()
         self.sentiment_analyzer = SentimentIntensityAnalyzer()
@@ -74,12 +76,13 @@ class ScoutBotService:
                         query,
                         self.min_upvote_ratio,
                         self.min_score,
-                        self.min_comments
+                        self.min_comments,
+                        self.search_limit,
                     ))
 
             logger.info(
                 f"Searching {len(coroutines)} subreddit/query pair(s) in batches of "
-                f"{settings.REDDIT_BATCH_SIZE} (delay: {settings.REDDIT_BATCH_DELAY}s)."
+                f"{self.runtime_settings.reddit_batch_size} (delay: {self.runtime_settings.reddit_batch_delay}s)."
             )
 
             # Use batched_gather instead of asyncio.gather to avoid firing
@@ -87,8 +90,8 @@ class ScoutBotService:
             # inside each search_one call handles per-request throttling.
             raw_results = await batched_gather(
                 coroutines,
-                batch_size = settings.REDDIT_BATCH_SIZE,
-                batch_delay = settings.REDDIT_BATCH_DELAY,
+                batch_size = self.runtime_settings.reddit_batch_size,
+                batch_delay = self.runtime_settings.reddit_batch_delay,
             )
 
             search_results_list = []
@@ -188,14 +191,14 @@ class ScoutBotService:
                         sentiment_collection.append(result_batches)
 
             total_found = len(sentiment_collection)
-            if total_found > settings.MAX_SCOUT_RESULTS:
+            if total_found > self.runtime_settings.max_scout_results:
                 logger.warning(
                     f"Scout results capped: {total_found} negative posts found, "
-                    f"truncating to {settings.MAX_SCOUT_RESULTS} to stay within "
+                    f"truncating to {self.runtime_settings.max_scout_results} to stay within "
                     f"free-tier token limits."
                 )
                 sentiment_collection = sentiment_collection[
-                    :settings.MAX_SCOUT_RESULTS]
+                    :self.runtime_settings.max_scout_results]
 
             logger.info(
                 f"Analysis complete. {len(sentiment_collection)} negative posts retained "
@@ -233,7 +236,7 @@ class ScoutBotService:
             def _call_gemini():
                 """Inner wrapper so gemini_retry can target just the API call."""
                 return self.gemini.models.generate_content(
-                    model = settings.SCOUT_MODEL,
+                    model = self.runtime_settings.scout_model,
                     contents = settings.AGENT_VALIDATE_POSTS_OBJECTIVE,
                     config = provide_agent_tools(
                         tools = [self.analyze_search_results,

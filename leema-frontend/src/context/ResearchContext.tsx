@@ -1,6 +1,10 @@
-import React, { createContext, useCallback, useContext, useEffect } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+} from "react";
 import type { ExtractedPost } from "@/features/Research/services/researchService";
-import { settingsService } from "@/features/Settings/services/settingsService";
 import type { FindingDataProps } from "@/features/Findings/types";
 import {
   STAGE_COMPLETED,
@@ -24,6 +28,8 @@ type ResearchContextType = {
   findings: FindingDataProps[];
   extractedPosts: ExtractedPost[];
   isLoadingFindings: boolean;
+  deletingFindingId: string | null;
+  deleteFinding: (findingId: string) => Promise<void>;
   isLoadingPosts: boolean;
 
   selectedChannel: string;
@@ -56,31 +62,38 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
     [setStageState],
   );
 
-  const { extractedPosts, setExtractedPosts, isLoadingPosts, refreshExtractions } =
-    useExtractedPosts(markConversationsFound);
-  const { findings, setFindings, isLoadingFindings, refreshFindings } =
-    useFindings(markProblemsIdentified);
+  const {
+    extractedPosts,
+    setExtractedPosts,
+    isLoadingPosts,
+    refreshExtractions,
+  } = useExtractedPosts(markConversationsFound);
+  const {
+    findings,
+    setFindings,
+    isLoadingFindings,
+    refreshFindings,
+    deletingFindingId,
+    deleteFinding,
+  } = useFindings(markProblemsIdentified);
 
   const delivery = useFindingsDelivery({
     findings,
     onDelivered: markFindingsSaved,
   });
 
-  const { isRunning, runFullResearchScan, runStage } =
-    useStageRunner({
-      findings,
-      selectedChannel: delivery.selectedChannel,
-      setFindings,
-      setExtractedPosts,
-      setStageState,
-      updateStagesWhere,
-    });
+  const { isRunning, runFullResearchScan, runStage } = useStageRunner({
+    findings,
+    selectedChannel: delivery.selectedChannel,
+    setFindings,
+    setExtractedPosts,
+    setStageState,
+    updateStagesWhere,
+  });
 
-  // Load existing findings, extractions, and settings from database on initial load
   useEffect(() => {
     refreshFindings();
     refreshExtractions();
-    settingsService.getSettingsOrCached();
   }, [refreshFindings, refreshExtractions]);
 
   return (
@@ -93,6 +106,8 @@ export function ResearchProvider({ children }: { children: React.ReactNode }) {
         findings,
         extractedPosts,
         isLoadingFindings,
+        deletingFindingId,
+        deleteFinding,
         isLoadingPosts,
         ...delivery,
       }}

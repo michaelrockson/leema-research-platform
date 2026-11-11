@@ -1,7 +1,6 @@
-import { Moon, Settings, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button.tsx";
-import DrawerStore from "@/components/DrawerStore.tsx";
-import SettingsForm from "@/features/Settings/components/SettingsForm.tsx";
+import SettingsDrawer from "@/features/Settings/components/SettingsDrawer.tsx";
 import NotificationBell from "@/features/Notifications/components/NotificationBell.tsx";
 import { useResearchContext } from "@/context/ResearchContext.tsx";
 import useScheduledTheme from "@/hooks/useScheduledTheme";
@@ -24,15 +23,6 @@ export default function HeaderBar() {
         </a>
 
         <div className="flex items-center gap-2">
-
-          <Button
-            className="h-10 rounded-lg px-4 font-semibold"
-            disabled={isRunning}
-            onClick={() => runFullResearchScan()}
-          >
-            {isRunning ? "Finding…" : "Find Problems"}
-          </Button>
-
           <Button
             variant="ghost"
             className="size-10 rounded-lg"
@@ -45,19 +35,15 @@ export default function HeaderBar() {
 
           <NotificationBell />
 
-          <DrawerStore
-            drawerProps={{
-              buttonClassName: "size-10 rounded-lg bg-card",
-              buttonVariant: "outline",
-              ButtonLabel: (
-                <Settings className="size-5" aria-label="Search settings" />
-              ),
-              drawerTitle: "Search settings",
-              drawerContent: <SettingsForm />,
-              drawerSaveButtonLabel: "Save Changes",
-              drawerCancelButtonLabel: "Cancel",
-            }}
-          />
+          <Button
+            className="h-10 rounded-lg px-4 font-semibold"
+            disabled={isRunning}
+            onClick={() => runFullResearchScan()}
+          >
+            {isRunning ? "Finding…" : "Find Problems"}
+          </Button>
+
+          <SettingsDrawer />
         </div>
       </div>
     </header>

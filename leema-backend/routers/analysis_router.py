@@ -12,6 +12,7 @@ from utils.logger import logger
 router = APIRouter(tags = ["Analysis"])
 
 MAX_TITLE_WORDS = 12
+SECTION_SEPARATOR = "\n\n"
 
 
 def _title_from_problem_statement(problem_statement: str) -> str:
@@ -40,11 +41,36 @@ def _title_from_problem_statement(problem_statement: str) -> str:
     return title[0].upper() + title[1:]
 
 
+def split_brief_sections(content: str) -> list[str]:
+    """
+    Split a curator brief into one text section per opportunity. Newer briefs
+    open each opportunity with HEADLINE, older ones with PROBLEM STATEMENT.
+    """
+    if re.search(r"HEADLINE:", content, flags = re.IGNORECASE):
+        section_marker = r"(?=HEADLINE:)"
+    else:
+        section_marker = r"(?=PROBLEM STATEMENT:)"
+    sections = re.split(section_marker, content, flags = re.IGNORECASE)
+    sections = [section.strip() for section in sections if section.strip()]
+    return sections or [content]
+
+
+def build_finding_id(brief_id: int, section_index: int) -> str:
+    return f"{brief_id}-{section_index}"
+
+
+def parse_finding_id(finding_id: str) -> tuple[int, int] | None:
+    match = re.fullmatch(r"(\d+)-(\d+)", finding_id)
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
 def _parse_brief_to_findings(briefs):
     """
     Parses raw curator brief text into the frontend FindingDataProps structure:
     {
-        "id": int,
+        "id": str,
         "title": str,
         "feasibility": str,
         "description": str,
@@ -55,23 +81,11 @@ def _parse_brief_to_findings(briefs):
     }
     """
     findings = []
-    finding_id = 1
 
     for brief in briefs:
-        content = brief.curated_content or ""
-        # Newer briefs open each opportunity with HEADLINE; older ones with
-        # PROBLEM STATEMENT.
-        if re.search(r"HEADLINE:", content, flags = re.IGNORECASE):
-            section_marker = r"(?=HEADLINE:)"
-        else:
-            section_marker = r"(?=PROBLEM STATEMENT:)"
-        sections = re.split(section_marker, content, flags = re.IGNORECASE)
-        sections = [section.strip() for section in sections if section.strip()]
+        sections = split_brief_sections(brief.curated_content or "")
 
-        if not sections:
-            sections = [content]
-
-        for section in sections:
+        for section_index, section in enumerate(sections):
             headline_match = re.search(
                 r"HEADLINE:\s*\"?([^\n\"]+)\"?", section,
                 flags = re.IGNORECASE
@@ -126,7 +140,7 @@ def _parse_brief_to_findings(briefs):
                 title = _title_from_problem_statement(description)
 
             findings.append({
-                "id": finding_id,
+                "id": build_finding_id(brief.id, section_index),
                 "title": title,
                 "feasibility": feasibility,
                 "description": description,
@@ -137,7 +151,6 @@ def _parse_brief_to_findings(briefs):
                 "source_comments":
                     int(comments_match.group(1)) if comments_match else None,
             })
-            finding_id += 1
 
     return findings
 
@@ -211,5 +224,68 @@ def get_findings_data():
                 "findings": findings,
             },
         }
+    finally:
+        session.close()
+
+
+@router.delete("/findings/{finding_id}")
+def delete_finding(finding_id: str):
+    """
+    Permanently remove one problem from its stored brief, so it no longer
+    appears in findings or in future Notion and email reports.
+    Returns the remaining findings.
+    """
+    parsed_id = parse_finding_id(finding_id)
+    if parsed_id is None:
+        raise HTTPException(status_code = 400,
+                            detail = f"'{finding_id}' is not a valid finding ID.")
+    brief_id, section_index = parsed_id
+
+    session = get_session()
+    try:
+        brief_repo = BriefRepository(session)
+        brief = brief_repo.get_brief_by_id(brief_id)
+        sections = (
+            split_brief_sections(brief.curated_content or "") if brief else []
+        )
+        if section_index >= len(sections):
+            raise HTTPException(
+                status_code = 404,
+                detail = "That problem no longer exists. Refresh to see the latest findings.",
+            )
+
+        remaining_sections = [
+            section for index, section in enumerate(sections)
+            if index != section_index
+        ]
+        if remaining_sections:
+            brief_repo.update_brief_content(
+                brief, SECTION_SEPARATOR.join(remaining_sections))
+        else:
+            brief_repo.delete_brief(brief)
+        session.commit()
+        logger.info(f"Deleted finding {finding_id}.")
+
+        findings = _parse_brief_to_findings(brief_repo.get_latest_brief())
+        return {
+            "phase": "analysis",
+            "success": True,
+            "message": "Problem deleted.",
+            "data": {
+                "findings_count": len(findings),
+                "findings": findings,
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as error:
+        session.rollback()
+        logger.error(f"Failed to delete finding {finding_id}: {error}",
+                     exc_info = True)
+        raise HTTPException(
+            status_code = 500,
+            detail = "Something went wrong while deleting that problem. "
+                     "Please try again.",
+        )
     finally:
         session.close()

@@ -1,5 +1,5 @@
 export type FindingDataProps = {
-  id: number;
+  id: string;
   title: string;
   feasibility: string;
   description: string;

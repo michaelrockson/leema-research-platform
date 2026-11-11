@@ -9,6 +9,7 @@ from database import get_session
 from repositories.brief_repository import BriefRepository
 from repositories.post_repository import PostRepository
 from repositories.sentiment_repository import SentimentRepository
+from services.runtime_settings_service import load_runtime_settings
 from settings import settings
 from utils.logger import logger
 from utils.rate_limiter import gemini_retry
@@ -27,6 +28,7 @@ class CoreService:
         self.sentiment_repo = SentimentRepository(self.session)
         self.brief_repo = BriefRepository(self.session)
         self.agent = initialize_gemini()
+        self.runtime_settings = load_runtime_settings()
         self.post_with_sentiments = []
         self.sources_by_post_number: Dict[int, Dict] = {}
         self.curator_agent_response = None
@@ -95,7 +97,7 @@ class CoreService:
             def _call_gemini():
                 """Inner wrapper so gemini_retry can target just the API call."""
                 return self.agent.models.generate_content(
-                    model = settings.AGENT_MODEL,
+                    model = self.runtime_settings.agent_model,
                     contents = settings.SCOUT_OBJECTIVE,
                     config = provide_agent_tools(
                         tools = [self.query_posts_with_sentiments])

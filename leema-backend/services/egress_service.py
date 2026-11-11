@@ -9,6 +9,7 @@ from notion_client import APIErrorCode, APIResponseError, Client
 
 from database import get_session
 from repositories.brief_repository import BriefRepository
+from services.runtime_settings_service import load_runtime_settings
 from settings import settings
 from utils.helpers import chunk_text, create_notion_blocks, \
     format_email
@@ -28,10 +29,15 @@ class EgressService:
         self.queried_brief = None
         self.formatted_email = None
         self.notion_key = settings.NOTION_API_KEY
-        self.notion_parent_page = settings.NOTION_DB_ID
+        runtime_settings = load_runtime_settings()
+        self.notion_parent_page = (
+            runtime_settings.notion_database_id or settings.NOTION_DB_ID
+        )
         self.email_address = settings.EMAIL_ADDRESS
         self.email_password = settings.EMAIL_APP_PASSWORD
-        self.recipient_address = settings.RECIPIENT_ADDRESS
+        self.recipient_address = (
+            runtime_settings.recipient_address or settings.RECIPIENT_ADDRESS
+        )
         self.notion_client = Client(auth = self.notion_key)
         self.notion_blocks = []
         self.session = get_session()

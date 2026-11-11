@@ -18,18 +18,16 @@ import type { NotificationRecord } from "@/features/Notifications/types";
 
 const MAX_BADGE_COUNT = 9;
 
-/** Header button that opens a list of recently received notifications. */
 export default function NotificationBell() {
   const { history, unreadCount, markAllRead, clearHistory } =
     useNotificationHistory();
-  // Captured when the popover opens so "5 minutes ago" is stable while open.
+
   const [openedAtMs, setOpenedAtMs] = useState(0);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
       setOpenedAtMs(Date.now());
     } else {
-      // Mark read on close so unread items stay highlighted while viewing.
       markAllRead();
     }
   };

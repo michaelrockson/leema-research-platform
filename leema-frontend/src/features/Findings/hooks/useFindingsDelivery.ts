@@ -3,6 +3,9 @@ import { findingsDeliveryService } from "@/features/Findings/services/findingsDe
 import { useNotifications } from "@/features/Notifications/hooks/useNotifications";
 import type { FindingDataProps } from "@/features/Findings/types";
 
+/** Step 3 sends to Notion and Email unless the user picks another channel. */
+const DEFAULT_DELIVERY_CHANNEL = "All Channels";
+
 type FindingsDeliveryOptions = {
   findings: FindingDataProps[];
   onDelivered: () => void;
@@ -12,7 +15,9 @@ export function useFindingsDelivery({
   findings,
   onDelivered,
 }: FindingsDeliveryOptions) {
-  const [selectedChannel, setSelectedChannel] = useState<string>("Notion");
+  const [selectedChannel, setSelectedChannel] = useState<string>(
+    DEFAULT_DELIVERY_CHANNEL,
+  );
   const [isSaving, setIsSaving] = useState(false);
   const { notifyError, notifySuccess, notifyWarning } = useNotifications();
 
